@@ -1,5 +1,3 @@
-import numpy as np
-
 ########################
 ###  Hyperparameters ###
 ########################
@@ -42,14 +40,25 @@ class MDP:
 
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
-    return np.sum(prob * (reward + mdp.gamma * V[next_state])
+    return sum(prob * (reward + mdp.gamma * V[next_state])
         for prob, next_state, reward in mdp.outcomes(state, action))
 
 def argmax_policy_sum(mdp, state, V, policy):
-    return np.argmax([policy_sum(mdp, state, action, V) for action in mdp.actions(state)])
+    # Computes  \argmax_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
+    return max(mdp.actions(state), key=lambda action: policy_sum(mdp, state, action, V))
 
 def max_policy_sum(mdp, state, V, policy):
-    return np.max([policy_sum(mdp, state, action, V) for action in mdp.actions(state)])
+    # Computes  \max_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
+    return max([policy_sum(mdp, state, action, V) for action in mdp.actions(state)])
+
+def action_from_state(mdp, state, policy):
+    # Computes \pi(state)
+    # Requires a deterministic policy, please do not put in actions with probability 0
+    if state not in policy:
+        raise KeyError(f"State '{state}' is missing from the policy. Is it a terminal state?")
+    assert len(policy[state]) == 1, f"Policy for {state} is not deterministic: {policy[state]}"
+    return next(iter(policy[state]))
+    # next(iter(policy[state])) is used to get the first action in the policy for the state
 
 
 ########################
@@ -57,7 +66,6 @@ def max_policy_sum(mdp, state, V, policy):
 ########################
 
 def policy_evaluation(mdp, policy, original_value, epsilon=EPSILON):
-    # Requires a deterministic policy, do not put in actions with probability 0
     # We do the inplace method since it has faster convergence
     delta = float("inf")
     V = original_value.copy()
@@ -67,11 +75,31 @@ def policy_evaluation(mdp, policy, original_value, epsilon=EPSILON):
             if mdp.is_terminal(state):
                 continue
             v = V[state]
-            assert len(policy[state]) == 1, f"Policy for {state} is not deterministic: {policy[state]}"
-            V[state] = policy_sum(mdp, state, next(iter(policy[state])), V)
-            # next(iter(policy[state])) is used to get the first action in the policy for the state
+            V[state] = policy_sum(mdp, state, action_from_state(mdp, state, policy), V)
             delta = max(delta, abs(v - V[state]))
     return V
+
+def policy_improvement(mdp, V, policy):
+    new_policy = {}
+    policy_stable = True
+    for state in mdp.states():
+        if mdp.is_terminal(state):
+            continue
+        old_action = action_from_state(mdp, state, policy)
+        # old_action = \pi(state)
+        pi_s = argmax_policy_sum(mdp, state, V, policy)
+        new_policy[state] = {pi_s: 1}
+        if old_action != pi_s: policy_stable = False
+    return new_policy, policy_stable
+    
+        
+def policy_iteration(mdp, policy):
+    policy_stable = False
+    V = {state: 0 for state in mdp.states()}
+    while not policy_stable:
+        V = policy_evaluation(mdp, policy, V)
+        policy, policy_stable = policy_improvement(mdp, V, policy)
+    return policy, V
 
 
 ########################
@@ -82,24 +110,33 @@ def policy_evaluation(mdp, policy, original_value, epsilon=EPSILON):
 # Must be stochastic, i.e. the sum of the probabilities for each state, action pair must be 1
 actions = {
     "s0": {
-        "left": [(0.8, "s1", 2), (0.2, "s3", -1)],
-        "right": [(0.3, "s3", 0), (0.7, "s3", 1)]
+        "left": [(0.8, "s1", 2), (0.2, "s2", -1)],
+        "right": [(0.3, "s2", 0), (0.7, "s2", 1)]
     },
     "s1": {
-        "finish": [(1.0, "s3", 5)]
+        "finish": [(1.0, "s2", 5)]
     },
     "s2": {}
 }
 
 # Dictionary of states:{action: probability}
 # This allows us to have both stochastic and deterministic policies
+# However our implementation of policy iteration is explicitly for deterministic policies
+# policy = {
+#     "s0": {"left": 0.5, "right": 0.5},
+#     "s1": {"finish": 1.0},
+# }
+
 policy = {
-    "s0": {"left": 0.5, "right": 0.5},
+    "s0": {"right": 1.0},
     "s1": {"finish": 1.0},
 }
-
 
 mdp = MDP(actions=actions, gamma=0.9)
 
 
-V = {state: 0 for state in mdp.states()}
+print("Initial policy:", policy)
+print("New policy and value function after policy iteration:")
+policy, V = policy_iteration(mdp, policy)
+print("Final policy:", policy)
+print("Final value function:", V)
