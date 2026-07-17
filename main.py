@@ -1,3 +1,6 @@
+import json
+
+
 ########################
 ###  Hyperparameters ###
 ########################
@@ -60,6 +63,9 @@ def action_from_state(mdp, state, policy):
     return next(iter(policy[state]))
     # next(iter(policy[state])) is used to get the first action in the policy for the state
 
+def json_import(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
 ########################
 ### Policy iteration ###
@@ -108,24 +114,12 @@ def policy_iteration(mdp, policy):
 
 # Dictionary of states:{state:[(probability, next_state, reward)]}
 # Must be stochastic, i.e. the sum of the probabilities for each state, action pair must be 1
-actions = {
-    "s0": {
-        "left": [(0.8, "s1", 2), (0.2, "s2", -1)],
-        "right": [(0.3, "s2", 0), (0.7, "s2", 1)]
-    },
-    "s1": {
-        "finish": [(1.0, "s2", 5)]
-    },
-    "s2": {}
-}
+actions = json_import("data/mdp.json")
 
 # Dictionary of states:{action: probability}
 # This allows us to have both stochastic and deterministic policies
-# However our implementation of policy iteration is explicitly for deterministic policies
-# policy = {
-#     "s0": {"left": 0.5, "right": 0.5},
-#     "s1": {"finish": 1.0},
-# }
+# However our implementation of policy iteration is explicitly for deterministic policies e.g.
+# policy = {"s0": {"left": 0.5, "right": 0.5}, "s1": {"finish": 1.0}}
 
 policy = {
     "s0": {"right": 1.0},
