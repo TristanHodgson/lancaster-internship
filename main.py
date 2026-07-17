@@ -1,5 +1,5 @@
 import json
-
+from tabulate import tabulate
 
 ########################
 ###  Hyperparameters ###
@@ -70,7 +70,8 @@ def action_from_state(mdp, state, policy):
     # Requires a deterministic policy, please do not put in actions with probability 0
     if state not in policy:
         raise KeyError(f"{state} is missing from the policy")
-    assert len(policy[state]) == 1, f"Stochastic policy {state}, {policy[state]}"
+    assert len(
+        policy[state]) == 1, f"Stochastic policy {state}, {policy[state]}"
     return next(iter(policy[state]))
     # next(iter(policy[state])) is used to get the first action in the policy for the state
 
@@ -162,17 +163,33 @@ actions = json_import("data/mdp.json")
 # This allows us to have both stochastic and deterministic policies
 # However our implementation of policy iteration is explicitly for deterministic policies e.g.
 # policy = {"s0": {"left": 0.5, "right": 0.5}, "s1": {"finish": 1.0}}
-policy = {
-    "s0": {"right": 1.0},
-    "s1": {"finish": 1.0},
+initial_policy = {
+    "s0": {"down": 1.0},
+    "s1": {"left": 1.0},
+    "s2": {"down": 1.0},
+    "s3": {"left": 1.0},
+    "s4": {"left": 1.0},
+    "s5": {"left": 1.0}
 }
-
 mdp = MDP(actions=actions, gamma=0.9)
 
-
-print("Initial policy:", policy)
-print("New policy and value function after policy iteration:")
-policy, V = policy_iteration(mdp, policy)
+policy, V = policy_iteration(mdp, initial_policy)
 assert policy_iteration(mdp, policy) == value_iteration(mdp)
-print("Final policy:", policy)
-print("Final value function:", V)
+
+
+table_data = []
+terminal_rows = []
+for state in sorted(mdp.states()):
+    if mdp.is_terminal(state):
+        terminal_rows.append([state, "NA", "NA", "NA"])
+    else:
+        table_data.append([
+            state,
+            action_from_state(mdp, state, initial_policy),
+            action_from_state(mdp, state, policy),
+            V[state]
+        ])
+
+# Print the table using the grid format
+headers = ["State", "Initial Action", "New Action", "New Value"]
+print(tabulate(table_data + terminal_rows, headers=headers, tablefmt="github", floatfmt=".4f"))
