@@ -8,8 +8,8 @@ from modules.helper import json_import, action_from_state
 ###  Hyperparameters ###
 ########################
 
-EPSILON = 1e-16 # Error for policy evaluation
-THETA = 1e-16 # Error for value iteration
+EPSILON = 1e-16  # Error for policy evaluation
+THETA = 1e-16  # Error for value iteration
 # TODO: How do we pick a good epsilon
 
 ########################
@@ -41,7 +41,7 @@ initial_policy = {
 mdp = MDP(actions=actions, gamma=0.9)
 policy, V = policy_iteration(mdp, initial_policy, EPSILON)
 assert policy_iteration(mdp, policy, EPSILON) == value_iteration(mdp, THETA)
-
+# Note: This assertion may fail without everything being wrong but the fact that it doesn't is good
 
 ########################
 ###      Display     ###
@@ -61,4 +61,5 @@ for state in sorted(mdp.states()):
         ])
 
 headers = ["State", "Initial Action", "New Action", "New Value"]
-print(tabulate(table_data + terminal_rows, headers=headers, tablefmt="github", floatfmt=".4f"))
+print(tabulate(table_data + terminal_rows,
+        headers=headers, tablefmt="github", floatfmt=".4f"))
