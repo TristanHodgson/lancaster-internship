@@ -13,26 +13,22 @@ EPSILON = 1e-16  # Error for policy evaluation
 THETA = 1e-16  # Error for value iteration
 TOL = 1e-8 # Tolerance for convergence in policy iteration and value iteration
 
-########################
-###     Load Data    ###
-########################
-
-actions = generate_mdp(
-    N=10,
-    alpha=0.1,
-    tau=1,
-    p=10000,
-    r=1,
-    delta=0.001
-)
-
+PARAMS = {
+    "N": 10,
+    "alpha": 0.1,
+    "tau": 1,
+    "p": 10000,
+    "r": 1,
+    "delta": 0.001,
+}
+GAMMA = 0.9
 
 ########################
 ###     Calculate    ###
 ########################
 
-
-mdp = MDP(actions=actions, gamma=0.9)
+actions = generate_mdp(**PARAMS)
+mdp = MDP(actions=actions, gamma=GAMMA)
 initial_policy = greedy_policy(mdp)
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 VI_policy, VI_V = value_iteration(mdp, THETA)
