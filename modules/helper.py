@@ -1,6 +1,3 @@
-import json
-
-
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
     assert not mdp.is_terminal(
@@ -31,17 +28,10 @@ def action_from_state(mdp, state, policy):
     # next(iter(policy[state])) is used to get the first action in the policy for the state
 
 
-def json_import(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
-
-
 def greedy_policy(mdp):
     # Returns a policy for the MDP that is greedy wrt the maximum possible reward (regardless of probability)
     return {
-        state: {
-            max(mdp.actions(state), key=lambda action: max(r for _, _, r in mdp.outcomes(state, action))): 1.0
-        }
+        state: {max(mdp.actions(state), key=lambda action: max(r for _, _, r in mdp.outcomes(state, action))): 1.0}
         for state in mdp.states()
         if mdp.actions(state)
     }
