@@ -34,3 +34,19 @@ def action_from_state(mdp, state, policy):
 def json_import(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
+
+
+def greedy_policy(mdp):
+    # Returns a policy for the MDP that is greedy wrt the maximum possible reward (regardless of probability)
+    return {
+        state: {
+            max(mdp.actions(state), key=lambda action: max(r for _, _, r in mdp.outcomes(state, action))): 1.0
+        }
+        for state in mdp.states()
+        if mdp.actions(state)
+    }
+
+
+def all_close(V1, V2, tol=1e-8):
+    # Check if two value functions are close enough
+    return all(abs(V1[state] - V2[state]) < tol for state in V1)

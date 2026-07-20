@@ -24,19 +24,14 @@ class MDP:
         return {state for state in self.states() if self.is_terminal(state)}
 
 
-
-def reward_function(state, action, r, p, N):
-    cost = r* (state[0] + action)
+def reward_function(state, action, r,  p, N):
+    cost = r * (state[0] + action)
     if state[0] + state[1] == N:
         cost += p
     return -cost
 
 
-def is_valid_state(state, N):
-    s1, s2 = state
-    return s1 >= 0 and s2 >= 0 and s1 + s2 <= N
-
-def generate_mdp(N, alpha, tau, P, r, delta):
+def generate_mdp(N, alpha, tau, p, r, delta):
     model = {}
     for s1 in range(N + 1):
         for s2 in range(N + 1 - s1):
@@ -44,26 +39,21 @@ def generate_mdp(N, alpha, tau, P, r, delta):
             actions = {}
             for action in range(0, s2 + 1):
                 degradation = (
-                    (N - s1 -s2)*alpha * delta,
-                    (s1 + action, s2 - action +1),
-                    delta * reward_function(state, action, r, P, N)
+                    (N - s1 - s2)*alpha * delta,
+                    (s1 + action, s2 - action + 1),
+                    delta * reward_function(state, action, r, p, N)
                 )
                 repair = (
                     (s1 + action)*tau * delta,
-                    (s1 + action -1, s2 - action),
-                    delta * reward_function(state, action, r, P, N)
+                    (s1 + action - 1, s2 - action),
+                    delta * reward_function(state, action, r, p, N)
                 )
                 nothing = (
                     1 - degradation[0] - repair[0],
                     (s1 + action, s2 - action),
-                    delta * reward_function(state, action, r, P, N)
+                    delta * reward_function(state, action, r,  p, N)
                 )
                 outcomes = [degradation, repair, nothing]
-                actions[action] = [
-                    outcome for outcome in outcomes
-                    if outcome[0] > 0 and is_valid_state(outcome[1], N)
-                ]
+                actions[action] = [outcome for outcome in outcomes if outcome[0] > 0]
             model[state] = actions
     return model
-
-
