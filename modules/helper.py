@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
     assert not mdp.is_terminal(
@@ -40,3 +43,32 @@ def greedy_policy(mdp):
 def all_close(V1, V2, tol=1e-8):
     # Check if two value functions are close enough
     return all(abs(V1[state] - V2[state]) < tol for state in V1)
+
+
+def graph_policy(mdp, policy, N):
+    policy_matrix = np.full((N + 1, N + 1), np.nan)
+
+    for s1 in range(N + 1):
+        for s2 in range(N + 1 - s1):
+            state = (s1, s2)
+            if state in policy:
+                action = action_from_state(mdp, state, policy)
+                policy_matrix[s1, s2] = action
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(policy_matrix, cmap="viridis", origin="lower")
+
+    for s1 in range(N + 1):
+        for s2 in range(N + 1):
+            value = policy_matrix[s1, s2]
+            if not np.isnan(value):
+                ax.text(
+                    s2, s1, f"{int(value)}",
+                    ha="center", va="center",
+                    color="white", fontsize=8
+                )
+
+    ax.set_xlabel("s2")
+    ax.set_ylabel("s1")
+    fig.colorbar(im, ax=ax)
+    plt.show()
