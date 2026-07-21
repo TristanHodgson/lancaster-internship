@@ -45,7 +45,7 @@ def all_close(V1, V2, tol=1e-8):
     return all(abs(V1[state] - V2[state]) < tol for state in V1)
 
 
-def graph_policy(mdp, policy, N, title="Policy Heatmap"):
+def graph_policy(mdp, policy, N, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
     policy_matrix = np.full((N + 1, N + 1), np.nan)
 
     for s1 in range(N + 1):
@@ -55,7 +55,7 @@ def graph_policy(mdp, policy, N, title="Policy Heatmap"):
                 action = action_from_state(mdp, state, policy)
                 policy_matrix[s1, s2] = action
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(20, 20))
     im = ax.imshow(policy_matrix, cmap="viridis", origin="lower", vmin=0, vmax=N)
 
     for s1 in range(N + 1):
@@ -72,4 +72,8 @@ def graph_policy(mdp, policy, N, title="Policy Heatmap"):
     ax.set_ylabel("s1")
     ax.set_title(title)
     fig.colorbar(im, ax=ax)
-    plt.show()
+    if SAVE:
+        fig.savefig(f"img/{filename}.png", dpi=600, bbox_inches="tight")
+    else:
+        plt.show()
+    plt.close(fig)

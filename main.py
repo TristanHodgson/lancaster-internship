@@ -81,3 +81,15 @@ print(f"Time taken for value iteration: {end - start:.4f} seconds")
 ###    Experiment    ###
 ########################
 
+Ns = [10*i for i in range(1, 11)]
+Ps = [10*i for i in range(5, 16)]
+
+for N in Ns:
+    for P in Ps:
+        PARAMS["N"] = N
+        PARAMS["p"] = P
+        actions = generate_mdp(**PARAMS)
+        mdp = MDP(actions=actions, gamma=GAMMA)
+        initial_policy = greedy_policy(mdp)
+        PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P}", SAVE=True, filename=f"policy_heatmap_N{N}_P{P}")
