@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
     assert not mdp.is_terminal(
@@ -34,7 +35,8 @@ def action_from_state(mdp, state, policy):
 def greedy_policy(mdp):
     # Returns a policy for the MDP that is greedy wrt the maximum possible reward (regardless of probability)
     return {
-        state: {max(mdp.actions(state), key=lambda action: max(r for _, _, r in mdp.outcomes(state, action))): 1.0}
+        state: {max(mdp.actions(state), key=lambda action: max(
+            r for _, _, r in mdp.outcomes(state, action))): 1.0}
         for state in mdp.states()
         if mdp.actions(state)
     }
@@ -55,8 +57,9 @@ def graph_policy(mdp, policy, N, title="Policy Heatmap", SAVE=False, filename="p
                 action = action_from_state(mdp, state, policy)
                 policy_matrix[s1, s2] = action
 
-    fig, ax = plt.subplots(figsize=(20, 20))
-    im = ax.imshow(policy_matrix, cmap="viridis", origin="lower", vmin=0, vmax=N)
+    fig, ax = plt.subplots(figsize=(12, 12))
+    im = ax.imshow(policy_matrix, cmap="viridis",
+                   origin="lower", vmin=0, vmax=N)
 
     for s1 in range(N + 1):
         for s2 in range(N + 1):
@@ -73,7 +76,7 @@ def graph_policy(mdp, policy, N, title="Policy Heatmap", SAVE=False, filename="p
     ax.set_title(title)
     fig.colorbar(im, ax=ax)
     if SAVE:
-        fig.savefig(f"img/{filename}.png", dpi=600, bbox_inches="tight")
+        fig.savefig(f"img/{filename}.svg", format="svg", bbox_inches="tight")
     else:
         plt.show()
     plt.close(fig)

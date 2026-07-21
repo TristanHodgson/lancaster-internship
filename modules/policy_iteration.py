@@ -36,7 +36,6 @@ def policy_improvement(mdp, V, policy):
 def policy_iteration(mdp, policy, epsilon):
     policy_stable = False
     V = {state: 0 for state in mdp.states()}
-    # Note: we use an initial V that is all zero, is there something better we should do instead?
     while not policy_stable:
         V = policy_evaluation(mdp, policy, V, epsilon)
         policy, policy_stable = policy_improvement(mdp, V, policy)
