@@ -1,10 +1,12 @@
 from time import perf_counter
 from tqdm import tqdm
+from pprint import pprint
+import tabulate
 
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
-from modules.helper import action_from_state, greedy_policy, all_close, graph_policy
+from modules.helper import action_from_state, greedy_policy, all_close, graph_policy, get_max_action
 
 
 ########################
@@ -12,7 +14,7 @@ from modules.helper import action_from_state, greedy_policy, all_close, graph_po
 ########################
 
 PARAMS = {
-    "N": 10, # Number of components
+    "N": 100, # Number of components
     "alpha": 1, # rate of failure
     "tau": 10, # Rate of repair
     "p": 120, # Penalty for system going down
@@ -25,8 +27,6 @@ EPSILON = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * 1e-8  # Error for policy evalu
 THETA = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * 1e-8  # Error for value iteration
 TOL = 1e-6 # Tolerance for testing equality of policy iteration and value iteration
 
-
-
 PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
 
 ########################
@@ -38,6 +38,8 @@ mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 initial_policy = greedy_policy(mdp)
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 VI_policy, VI_V = value_iteration(mdp, THETA)
+
+pprint(get_max_action(PI_policy))
 
 assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
 
@@ -90,15 +92,12 @@ print(f"Time taken for value iteration: {end - start:.4f} seconds")
 ########################
 
 
+Ns = [30]
+Ps = [i for i in range(1, 10)] + [10**i for i in range(6,24, 4)]
 
-
-
-
-Ns = [10*i for i in range(1, 4)]
-Ps = [i for i in range(1, 11)]
-
-for N in tqdm(Ns):
-    for P in Ps:
+table_data = []
+for N in Ns:
+    for P in tqdm(Ps):
         PARAMS["N"] = N
         PARAMS["p"] = P * N**2
         actions = generate_mdp(**PARAMS)
@@ -106,3 +105,6 @@ for N in tqdm(Ns):
         initial_policy = greedy_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
         graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N**2}", SAVE=True, filename=f"N{N}_P{P * N**2}")
+        table_data.append([N, P * N**2, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
+
+print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))

@@ -80,3 +80,15 @@ def graph_policy(mdp, policy, N, title="Policy Heatmap", SAVE=False, filename="p
     else:
         plt.show()
     plt.close(fig)
+
+
+def get_max_action(policy):
+    max_action = -float("inf")
+    max_action_state = None
+    for state in policy.keys():
+        assert len(policy[state]) == 1
+        action = next(iter(policy[state]))
+        if action > max_action:
+            max_action = action
+            max_action_state = state
+    return max_action_state, max_action
