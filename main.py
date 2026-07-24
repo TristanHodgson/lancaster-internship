@@ -14,17 +14,17 @@ from modules.helper import action_from_state, greedy_policy, all_close, graph_po
 ########################
 
 PARAMS = {
-    "N": 100, # Number of components
+    "N": 10, # Number of components
     "alpha": 1, # rate of failure
-    "tau": 10, # Rate of repair
+    "tau": 1000, # Rate of repair
     "p": 120, # Penalty for system going down
     "r": 1, # Repair cost
-    "gamma": 0.999 # Discount factor
+    "gamma": 1 # Discount factor
 }
 
 
 EPSILON = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * 1e-8  # Error for policy evaluation
-THETA = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * 1e-8  # Error for value iteration
+THETA = (1-PARAMS["gamma"])/(2*PARAMS["gamma"]) * 1e-8  # Error for value iteration (see 6.3.3 of Puterman)
 TOL = 1e-6 # Tolerance for testing equality of policy iteration and value iteration
 
 PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
@@ -92,8 +92,8 @@ print(f"Time taken for value iteration: {end - start:.4f} seconds")
 ########################
 
 
-Ns = [30]
-Ps = [i for i in range(1, 10)] + [10**i for i in range(6,24, 4)]
+Ns = [20,30,50]
+Ps = [i for i in range(1, 10)] + [10**i for i in range(4,16, 4)]
 
 table_data = []
 for N in Ns:
@@ -104,7 +104,7 @@ for N in Ns:
         mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
         initial_policy = greedy_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N**2}", SAVE=True, filename=f"N{N}_P{P * N**2}")
+        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N**2}, tau={PARAMS['tau']}", SAVE=True, filename=f"N{N}_P{P * N**2}_t{PARAMS['tau']}")
         table_data.append([N, P * N**2, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
 
 print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))
