@@ -16,9 +16,25 @@ def argmax_policy_sum(mdp, state, V):
 
 
 def max_policy_sum(mdp, state, V):
-    # Computes  \max_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
+    # Computes  $\max_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s'))$ for all actions a in state s
     assert not mdp.is_terminal(state), f"{state} is terminal MPS"
     return max([policy_sum(mdp, state, action, V) for action in mdp.actions(state)])
+
+def argmax_policy_sum_gamma_1(mdp, state, u):
+    # Computes \argmax_a \sum_{s', r} p(s', r | s, a) * (r + u(s'))
+    assert not mdp.is_terminal(state), f"{state} is terminal MPS"
+    return max(
+        mdp.actions(state),
+        key=lambda action: sum(
+            probability * (reward + u[next_state])
+            for probability, next_state, reward
+            in mdp.outcomes(state, action)
+        )
+    )
+
+def span_norm(x):
+    # Computes the span norm of list x
+    return max(x) - min(x)
 
 
 def action_from_state(mdp, state, policy):
@@ -92,3 +108,25 @@ def get_max_action(policy):
             max_action = action
             max_action_state = state
     return max_action_state, max_action
+
+
+
+def policy_sum_gamma_1(mdp, state, action, u):
+    return sum(
+        probability * (reward + u[next_state])
+        for probability, next_state, reward
+        in mdp.outcomes(state, action)
+    )
+
+def span_norm(values):
+    return max(values) - min(values)
+
+def argmax_policy_sum_gamma_1(mdp, state, u, old_action=None):
+    actions = list(mdp.actions(state))
+    best_value = max(policy_sum_gamma_1(mdp, state, action, u) for action in actions)
+    # Don't change the policy unless we have to
+    # This means that policy will converge not just the value
+    if (old_action is not None and policy_sum_gamma_1(mdp, state, old_action, u) == best_value):
+        return old_action
+    else:
+        return max(actions, key=lambda action: policy_sum_gamma_1(mdp, state, action, u))

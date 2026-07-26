@@ -15,17 +15,22 @@ from modules.helper import action_from_state, greedy_policy, all_close, graph_po
 
 PARAMS = {
     "N": 10, # Number of components
-    "alpha": 1, # rate of failure
+    "alpha": 1, # rate of failure, do not change
     "tau": 1000, # Rate of repair
     "p": 120, # Penalty for system going down
-    "r": 1, # Repair cost
+    "r": 1, # Repair cost, do not change
     "gamma": 1 # Discount factor
 }
 
 
-EPSILON = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * 1e-8  # Error for policy evaluation
-THETA = (1-PARAMS["gamma"])/(2*PARAMS["gamma"]) * 1e-8  # Error for value iteration (see 6.3.3 of Puterman)
+EPSILON = 1e-8  # Error for policy evaluation
+THETA = 1e-8  # Error for value iteration (see 6.3.3 of Puterman)
 TOL = 1e-6 # Tolerance for testing equality of policy iteration and value iteration
+
+if PARAMS["gamma"] != 1:
+    EPSILON = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * EPSILON
+    THETA = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * THETA
+
 
 PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
 
@@ -37,12 +42,8 @@ actions = generate_mdp(**PARAMS)
 mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 initial_policy = greedy_policy(mdp)
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-VI_policy, VI_V = value_iteration(mdp, THETA)
-
-pprint(get_max_action(PI_policy))
-
-assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
-
+# VI_policy, VI_V = value_iteration(mdp, THETA)
+# assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
 # graph_policy(mdp, PI_policy, PARAMS["N"])
 
 
@@ -51,10 +52,12 @@ assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did
 ########################
 
 # Commented out to speed up run time. Results below.
+# VI only implemented for gamma < 1 so don't try a speed test with gamma = 1
 
 """
 Ns = [10*i for i in range(1, 11)]
 Ps = [10*i for i in range(5, 16)]
+# Remember to set PARAMS["delta"] <= 1 / (PARAMS["N"] * PARAMS["tau"]) for each iteration
 
 start = perf_counter()
 for N in Ns:
@@ -91,20 +94,20 @@ print(f"Time taken for value iteration: {end - start:.4f} seconds")
 ###    Experiment    ###
 ########################
 
-
 Ns = [20,30,50]
-Ps = [i for i in range(1, 10)] + [10**i for i in range(4,16, 4)]
+Ps = [i for i in range(1, 10)] + [10**i for i in range(4,12, 4)]
 
 table_data = []
 for N in Ns:
     for P in tqdm(Ps):
         PARAMS["N"] = N
-        PARAMS["p"] = P * N**2
+        PARAMS["p"] = P * N
+        PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
         actions = generate_mdp(**PARAMS)
         mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
         initial_policy = greedy_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N**2}, tau={PARAMS['tau']}", SAVE=True, filename=f"N{N}_P{P * N**2}_t{PARAMS['tau']}")
+        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N**2}, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N**2}_t{PARAMS['tau']}")
         table_data.append([N, P * N**2, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
 
 print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))
