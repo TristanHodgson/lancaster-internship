@@ -58,6 +58,7 @@ def policy_improvement_gamma_1(mdp, u, policy):
         policy[state] = {new_action: 1.0}
     return policy
 
+
 def policy_evaluation_sweep_gamma_1(mdp, policy, u):
     for state in mdp.states():
         if mdp.is_terminal(state):
@@ -65,6 +66,7 @@ def policy_evaluation_sweep_gamma_1(mdp, policy, u):
         action = action_from_state(mdp, state, policy)
         u[state] = policy_sum_gamma_1(mdp, state, action, u)
     return u
+
 
 def policy_iteration_gamma_1(mdp, policy, epsilon, m):
     v = {state: 0 for state in mdp.states()}
@@ -74,8 +76,10 @@ def policy_iteration_gamma_1(mdp, policy, epsilon, m):
         policy = policy_improvement_gamma_1(mdp, u, policy)
         for _ in range(m+1):
             u = policy_evaluation_sweep_gamma_1(mdp, policy, u)
-        delta = span_norm([u[state] - v[state] for state in mdp.states() if not mdp.is_terminal(state)])
-        ref_val = next(iter(u.values())) # Arbitrary state for reference value for relative value iteration
+        delta = span_norm([u[state] - v[state]
+                          for state in mdp.states() if not mdp.is_terminal(state)])
+        # Arbitrary state for reference value for relative value iteration
+        ref_val = next(iter(u.values()))
         v = {state: val - ref_val for state, val in u.items()}
     return policy, v
 

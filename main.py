@@ -107,7 +107,7 @@ for N in Ns:
         mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
         initial_policy = greedy_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N  }, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N}_t{PARAMS['tau']}")
+        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N }, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N}_t{PARAMS['tau']}")
         table_data.append([N, P * N, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
 
 print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))
