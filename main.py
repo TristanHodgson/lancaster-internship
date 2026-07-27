@@ -28,8 +28,8 @@ THETA = 1e-8  # Error for value iteration (see 6.3.3 of Puterman)
 TOL = 1e-6 # Tolerance for testing equality of policy iteration and value iteration
 
 if PARAMS["gamma"] != 1:
-    EPSILON = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * EPSILON
-    THETA = (1-PARAMS["gamma"])/(PARAMS["gamma"]) * THETA
+    EPSILON = max((1-PARAMS["gamma"])/(PARAMS["gamma"]) * EPSILON, 1e-14)
+    THETA = max((1-PARAMS["gamma"])/(PARAMS["gamma"]) * THETA, 1e-14)
 
 
 PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
@@ -94,7 +94,7 @@ print(f"Time taken for value iteration: {end - start:.4f} seconds")
 ###    Experiment    ###
 ########################
 
-Ns = [20,30,50]
+Ns = [50]
 Ps = [i for i in range(1, 10)] + [10**i for i in range(4,12, 4)]
 
 table_data = []
@@ -107,7 +107,7 @@ for N in Ns:
         mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
         initial_policy = greedy_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N**2}, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N**2}_t{PARAMS['tau']}")
-        table_data.append([N, P * N**2, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
+        graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N  }, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N}_t{PARAMS['tau']}")
+        table_data.append([N, P * N, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
 
 print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))
