@@ -221,3 +221,4 @@ questions.md
 img/*.svg
 img/*.png
 .vscode
+secret/
