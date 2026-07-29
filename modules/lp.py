@@ -30,13 +30,18 @@ def solve_lp(mdp):
     return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0): 1.0} for s in mdp.states()} # Produce a deterministic policy by taking the action with the highest x(s,a) value for each state s, or the first if all 0
 
 
-def solve_lp_gamma_1(mdp):
+def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
     #   \forall j\in S \qquad \sum_a x_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = 0
     #   \forall j \in S \qquad \sum_{a \in A(j)} x_{j, a} + \sum_{a\in A(j)} y_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) y_{s, a} = \alpha_j
     #   x_{s, a} \ge 0 \quad \forall s \in S, \forall a \in A(s)
     #   y_{s, a} \ge 0 \quad \forall s \in S, \forall a \in A(s)
+    # We pick our policy:
+    # \begin{cases}
+    #   \max_{a\in A(s)} x_{s, a} & \text{if } x_{s, a} > \epsilon \\
+    #   \max_{a\in A(s)} y_{s, a} & \text{otherwise}
+    # \end{cases}
     prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMaximize)
     x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     y = {(s, a): pulp.LpVariable(f"y_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
@@ -66,8 +71,8 @@ def solve_lp_gamma_1(mdp):
     for s in mdp.states():
         # Sum the x values for the current state to check if it's recurrent
         x_sum = sum(pulp.value(x[(s, a)]) or 0 for a in mdp.actions(s))
-        # We use a small tolerance (e.g., 1e-6) to account for floating-point inaccuracies
-        if x_sum > 1e-6:
+        # We use a small epsilon > 0 to account for floating-point inaccuracies
+        if x_sum > EPSILON:
             # State is recurrent under the optimal policy -> use x variables
             best_action = max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0)
         else:
