@@ -41,17 +41,20 @@ def generate_mdp(N, alpha, tau, p, r, delta, gamma):
                 degradation = (
                     (N - s1 - s2)*alpha * delta,
                     (s1 + action, s2 - action + 1),
-                    delta * reward_function(state, action, r, p, N, gamma)
+                    # delta * reward_function(state, action, r, p, N, gamma)
+                    reward_function(state, action, r, p, N, gamma)
                 )
                 repair = (
                     (s1 + action)*tau * delta,
                     (s1 + action - 1, s2 - action),
-                    delta * reward_function(state, action, r, p, N, gamma)
+                    # delta * reward_function(state, action, r, p, N, gamma)
+                    reward_function(state, action, r, p, N, gamma)
                 )
                 nothing = (
                     1 - degradation[0] - repair[0],
                     (s1 + action, s2 - action),
-                    delta * reward_function(state, action, r,  p, N,gamma)
+                    # delta * reward_function(state, action, r,  p, N,gamma)
+                    reward_function(state, action, r, p, N, gamma)
                 )
                 outcomes = [degradation, repair, nothing]
                 actions[action] = [outcome for outcome in outcomes if outcome[0] > 0]
