@@ -91,6 +91,7 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     # We pick our policy: \argmax_{a\in A(s)} x_{s, a}
 
     prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMaximize)
+    # prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMinimize)
     x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
 
     objective = []

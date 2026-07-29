@@ -130,3 +130,55 @@ def argmax_policy_sum_gamma_1(mdp, state, u, old_action=None):
         return old_action
     else:
         return max(actions, key=lambda action: policy_sum_gamma_1(mdp, state, action, u))
+
+
+
+
+def policy_gain(mdp, policy):
+    n = len(mdp.states())
+    state_to_idx = {state: i for i, state in enumerate(mdp.states())}
+    P = np.zeros((n, n)) # Transition matrix
+    R = np.zeros(n) # Reward vector    
+    for s in mdp.states():
+        if mdp.is_terminal(s):
+            continue
+        i = state_to_idx[s]        
+        for a, action_prob in policy.get(s, {}).items():
+            for prob, next_s, reward in mdp.outcomes(s, a):
+                j = state_to_idx[next_s]                
+                P[i, j] += action_prob * prob
+                R[i] += action_prob * prob * reward
+    I = np.eye(n)
+    V = np.linalg.solve(I - (mdp.gamma * P), R) # Solve the linear system (I - gamma * P) * V = R
+    # Re-map the calculated values back to their corresponding states
+    return {state: V[i] for i, state in enumerate(mdp.states())}
+
+
+def policy_gain_gamma_1(mdp, policy):
+    n = len(mdp.states())
+    state_to_idx = {state: i for i, state in enumerate(mdp.states())}
+    P = np.zeros((n, n))  # Transition matrix
+    R = np.zeros(n) # Reward vector
+    for s in mdp.states():
+        if mdp.is_terminal(s):
+            P[state_to_idx[s], state_to_idx[s]] = 1.0 # Terminal states loop to themselves with 0 reward
+            continue
+        i = state_to_idx[s]
+        for a, action_prob in policy.get(s, {}).items():
+            for prob, next_s, reward in mdp.outcomes(s, a):
+                j = state_to_idx[next_s]
+                P[i, j] += action_prob * prob
+                R[i] += action_prob * prob * reward
+
+    # Construct the system A * x = R
+    # where A is (I - P) but we replace the last column with 1s to represent 'g'
+    A = np.eye(n) - P
+    A[:, -1] = 1.0     
+    x, _, _, _ = np.linalg.lstsq(A, R, rcond=None)    
+    g = x[-1]
+    V_bias = np.zeros(n)
+    V_bias[:-1] = x[:-1]
+    V_bias[-1] = 0.0 
+    bias_dict = {state: V_bias[i] for i, state in enumerate(mdp.states())}
+    # Returning a tuple: (scalar gain, dict of relative state values)
+    return g, bias_dict

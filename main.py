@@ -6,7 +6,7 @@ import tabulate
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
-from modules.helper import action_from_state, greedy_policy, all_close, graph_policy, get_max_action
+from modules.helper import action_from_state, greedy_policy, all_close, graph_policy, get_max_action, policy_gain, policy_gain_gamma_1
 from modules.lp import lp
 
 
@@ -57,6 +57,11 @@ LP_policy = lp(mdp)
 
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
+
+policy_gain_lp = policy_gain_gamma_1(mdp, LP_policy)
+policy_gain_pi = policy_gain_gamma_1(mdp, PI_policy)
+pprint(f"Policy Gain from LP:\n{policy_gain_lp}")
+pprint(f"Policy Gain from PI:\n{policy_gain_pi}")
 
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 # assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
