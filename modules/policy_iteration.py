@@ -67,20 +67,23 @@ def policy_evaluation_sweep_gamma_1(mdp, policy, u):
         u[state] = policy_sum_gamma_1(mdp, state, action, u)
     return u
 
-
-def policy_iteration_gamma_1(mdp, policy, epsilon, m):
-    v = {state: 0 for state in mdp.states()}
+def policy_evaluation_gamma_1(mdp, policy, v, epsilon):
     delta = float("inf")
     while delta > epsilon:
-        u = v.copy()
-        policy = policy_improvement_gamma_1(mdp, u, policy)
-        for _ in range(m+1):
-            u = policy_evaluation_sweep_gamma_1(mdp, policy, u)
-        delta = span_norm([u[state] - v[state]
-                          for state in mdp.states() if not mdp.is_terminal(state)])
-        # Arbitrary state for reference value for relative value iteration
+        u = policy_evaluation_sweep_gamma_1(mdp, policy, v.copy())
+        delta = span_norm([u[state] - v[state] for state in mdp.states() if not mdp.is_terminal(state)])
         ref_val = next(iter(u.values()))
         v = {state: val - ref_val for state, val in u.items()}
+    return v
+
+def policy_iteration_gamma_1(mdp, policy, epsilon):
+    policy_stable = False
+    v = {state: 0 for state in mdp.states()}
+    while not policy_stable:
+        v = policy_evaluation_gamma_1(mdp, policy, v, epsilon)
+        old_policy = policy.copy()
+        policy = policy_improvement_gamma_1(mdp, v, policy)
+        policy_stable = (policy == old_policy)
     return policy, v
 
 
@@ -89,9 +92,9 @@ def policy_iteration_gamma_1(mdp, policy, epsilon, m):
 #########################
 
 
-def policy_iteration(mdp, initial_policy, epsilon, m=10):
+def policy_iteration(mdp, initial_policy, epsilon):
     if mdp.gamma < 1:
         policy = greedy_policy(mdp)
         return discounted_policy_iteration(mdp, policy, epsilon)
     else:
-        return policy_iteration_gamma_1(mdp, initial_policy, epsilon, m)
+        return policy_iteration_gamma_1(mdp, initial_policy, epsilon)
