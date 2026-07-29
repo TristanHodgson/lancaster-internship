@@ -1,4 +1,5 @@
 import pulp
+from modules import mdp
 from modules.mdp import MDP
 
 
@@ -60,7 +61,21 @@ def solve_lp_gamma_1(mdp):
         prob += (condition2_term1 - pulp.lpSum(condition2_term2[j]) == alpha) # Adding the whole of the second condition
 
     prob.solve(pulp.GUROBI(msg=False)) # Solve using Gurobi
-    return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0): 1.0} for s in mdp.states()} # Produce a deterministic policy by taking the action with the highest x(s,a) value for each state s, or the first if all 0
+
+    policy = {}
+    for s in mdp.states():
+        # Sum the x values for the current state to check if it's recurrent
+        x_sum = sum(pulp.value(x[(s, a)]) or 0 for a in mdp.actions(s))
+        # We use a small tolerance (e.g., 1e-6) to account for floating-point inaccuracies
+        if x_sum > 1e-6:
+            # State is recurrent under the optimal policy -> use x variables
+            best_action = max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0)
+        else:
+            # State is transient under the optimal policy -> use y variables
+            best_action = max(mdp.actions(s), key=lambda a: pulp.value(y[(s, a)]) or 0)
+        policy[s] = {best_action: 1.0}
+        
+    return policy
 
 
 

@@ -23,7 +23,7 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": 10, # Number of components
+    "N": 6, # Number of components
     "alpha": 1, # rate of failure, do not change
     "tau": 1000, # Rate of repair
     "p": 120, # Penalty for system going down
