@@ -23,7 +23,7 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": 6, # Number of components
+    "N": 4, # Number of components
     "alpha": 1, # rate of failure, do not change
     "tau": 1000, # Rate of repair
     "p": 120, # Penalty for system going down
@@ -60,8 +60,11 @@ graph_policy(mdp, PI_policy, PARAMS["N"])
 
 policy_gain_lp = policy_gain_gamma_1(mdp, LP_policy)
 policy_gain_pi = policy_gain_gamma_1(mdp, PI_policy)
-pprint(f"Policy Gain from LP:\n{policy_gain_lp}")
-pprint(f"Policy Gain from PI:\n{policy_gain_pi}")
+print(f"Policy Gain from LP:\n")
+pprint(policy_gain_lp)
+print("\n\n\n\n\n")
+print(f"Policy Gain from PI:\n")
+pprint(policy_gain_pi)
 
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 # assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
