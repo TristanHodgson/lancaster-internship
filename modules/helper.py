@@ -175,10 +175,11 @@ def policy_gain_gamma_1(mdp, policy):
     A = np.eye(n) - P
     A[:, -1] = 1.0     
     x, _, _, _ = np.linalg.lstsq(A, R, rcond=None)    
-    g = x[-1]
     V_bias = np.zeros(n)
+    V_gain = np.zeros(n)
+    
     V_bias[:-1] = x[:-1]
     V_bias[-1] = 0.0 
     bias_dict = {state: V_bias[i] for i, state in enumerate(mdp.states())}
     # Returning a tuple: (scalar gain, dict of relative state values)
-    return g, bias_dict
+    return x, bias_dict

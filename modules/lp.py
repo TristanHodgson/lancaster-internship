@@ -27,7 +27,8 @@ def solve_lp(mdp):
     prob.solve(pulp.GUROBI(msg=False)) # Solve using Gurobi
     return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0): 1.0} for s in mdp.states()} # Produce a deterministic policy by taking the action with the highest x(s,a) value for each state s, or the first if all 0
 
-""" LP from 9.3 of Puternam
+
+# LP from 9.3 of Puternam
 def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
@@ -41,6 +42,7 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     #   \argmax_{a\in A(s)} y_{s, a} & \text{otherwise}
     # \end{cases}
     prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMaximize)
+    # prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMinimize)
     x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     y = {(s, a): pulp.LpVariable(f"y_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     alpha = 1.0 / len(list(mdp.states())) # vector that just has to be positive, stochastic; we simplify to a scalar
@@ -78,9 +80,9 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
         policy[s] = {best_action: 1.0}
         
     return policy
+
+
 """
-
-
 # Model from 8.8 of Puternam
 def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
@@ -111,7 +113,7 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     prob.solve(pulp.GUROBI(msg=False)) # Solve using Gurobi
         
     return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or -1): 1.0} for s in mdp.states()} # Produce a deterministic policy by taking the action with the highest x(s,a) value for each state s, or the -1 if all 0
-
+"""
 
 
 def lp(mdp):
