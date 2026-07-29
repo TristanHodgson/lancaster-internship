@@ -28,7 +28,7 @@ def reward_function(state, action, r,  p, N, gamma):
     cost = r * (state[0] + action)
     if state[0] + state[1] == N:
         cost += p
-    return -cost * gamma
+    return -cost
 
 
 def generate_mdp(N, alpha, tau, p, r, delta, gamma):

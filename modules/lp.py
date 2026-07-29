@@ -29,7 +29,7 @@ def solve_lp(mdp):
 
 
 # LP from 9.3 of Puternam
-def solve_lp_gamma_1(mdp, EPSILON=1e-13):
+def solve_lp_gamma_1(mdp, EPSILON=1e-7):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
     #   \forall j\in S \qquad \sum_a x_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = 0
@@ -84,7 +84,7 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
 
 """
 # Model from 8.8 of Puternam
-def solve_lp_gamma_1(mdp, EPSILON=1e-13):
+def solve_lp_gamma_1(mdp, EPSILON=1e-8):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
     #   \forall j\in S \qquad \sum_a x_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = 0
