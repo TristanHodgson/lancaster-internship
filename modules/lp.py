@@ -1,6 +1,4 @@
 import pulp
-from modules import mdp
-from modules.mdp import MDP
 
 
 def solve_lp(mdp):
@@ -85,7 +83,5 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
 
 
 def lp(mdp):
-    if mdp.gamma == 1:
-        return solve_lp_gamma_1(mdp)
-    else:
-        return solve_lp(mdp)
+    if mdp.gamma == 1: return solve_lp_gamma_1(mdp)
+    else: return solve_lp(mdp)
