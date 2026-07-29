@@ -27,7 +27,7 @@ def solve_lp(mdp):
     prob.solve(pulp.GUROBI(msg=False)) # Solve using Gurobi
     return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0): 1.0} for s in mdp.states()} # Produce a deterministic policy by taking the action with the highest x(s,a) value for each state s, or the first if all 0
 
-
+""" LP from 9.3 of Puternam
 def solve_lp_gamma_1(mdp, EPSILON=1e-13):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
@@ -78,6 +78,38 @@ def solve_lp_gamma_1(mdp, EPSILON=1e-13):
         policy[s] = {best_action: 1.0}
         
     return policy
+"""
+
+
+# Model from 8.8 of Puternam
+def solve_lp_gamma_1(mdp, EPSILON=1e-13):
+    # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
+    # Subject to:
+    #   \forall j\in S \qquad \sum_a x_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = 0
+    #   \sum_{s\in S} \sum_{a \in A(s)} x_{s, a} = 1
+    #   x_{s, a} \ge 0 \quad \forall s \in S, \forall a \in A(s)
+    # We pick our policy: \argmax_{a\in A(s)} x_{s, a}
+
+    prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMaximize)
+    x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
+
+    objective = []
+    condition1_term2 = {s: [] for s in mdp.states()}
+    for s in mdp.states():
+        for a in mdp.actions(s):
+            expected_reward = sum(p * r for p, _, r in mdp.outcomes(s, a)) # r(s,a)
+            objective.append(expected_reward * x[(s, a)]) # r(s,a) * x_{s,a}
+            for p, next_s, _ in mdp.outcomes(s, a):
+                condition1_term2[next_s].append(p * x[(s, a)]) # working out P(j | s, a) x_{s, a}, we only consider the states j with non-zero probability of being reached
+    prob += pulp.lpSum(objective) # Set the objective as the sum of the elements of the list
+
+    for j in mdp.states():
+        condition1_term1 = pulp.lpSum(x[(j, a)] for a in mdp.actions(j)) # \sum_{a \in A(j)} x_{j, a}
+        prob += (condition1_term1 - pulp.lpSum(condition1_term2[j]) == 0) # Adding the whole of the first condition
+    prob += (pulp.lpSum(x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) == 1) # Adding the whole of the second condition
+    prob.solve(pulp.GUROBI(msg=False)) # Solve using Gurobi
+        
+    return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or -1): 1.0} for s in mdp.states()} # Produce a deterministic policy by taking the action with the highest x(s,a) value for each state s, or the -1 if all 0
 
 
 
