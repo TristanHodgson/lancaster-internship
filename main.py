@@ -8,7 +8,7 @@ from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
 from modules.helper import action_from_state, greedy_policy, all_close, graph_policy, get_max_action, policy_gain, policy_gain_gamma_1
 from modules.lp import lp
-
+from modules.helper import action_from_state, greedy_policy, repair_all_policy, all_close, graph_policy, get_max_action, policy_gain, policy_gain_gamma_1
 
 ########################
 ###  Gurobi License  ###
@@ -23,7 +23,7 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": 4, # Number of components
+    "N": 6, # Number of components
     "alpha": 1, # rate of failure, do not change
     "tau": 100, # Rate of repair
     "p": 1200, # Penalty for system going down
@@ -32,8 +32,8 @@ PARAMS = {
 }
 
 
-EPSILON = 1e-8  # Error for policy evaluation
-THETA = 1e-8  # Error for value iteration (see 6.3.3 of Puterman)
+EPSILON = 1e-11  # Error for policy evaluation
+THETA = 1e-11  # Error for value iteration (see 6.3.3 of Puterman)
 TOL = 1e-6 # Tolerance for testing equality of policy iteration and value iteration
 
 if PARAMS["gamma"] != 1:
@@ -49,7 +49,7 @@ PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
 
 actions = generate_mdp(**PARAMS)
 mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
-initial_policy = greedy_policy(mdp)
+initial_policy = repair_all_policy(mdp)
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 LP_policy = lp(mdp)
 
@@ -58,13 +58,11 @@ LP_policy = lp(mdp)
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
 
-policy_gain_lp = policy_gain_gamma_1(mdp, LP_policy)
-policy_gain_pi = policy_gain_gamma_1(mdp, PI_policy)
-print(f"Policy Gain from LP:\n")
-pprint(policy_gain_lp)
-print("\n\n\n\n\n")
-print(f"Policy Gain from PI:\n")
-pprint(policy_gain_pi)
+gain_lp, bias_lp = policy_gain_gamma_1(mdp, LP_policy)
+gain_pi, bias_pi = policy_gain_gamma_1(mdp, PI_policy)
+print(f"Gain from LP: {gain_lp:.12f}")
+print(f"Gain from PI: {gain_pi:.12f}")
+print(f"Disagreements: {[s for s in mdp.states() if LP_policy[s] != PI_policy[s]]}")
 
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 # assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
