@@ -23,7 +23,7 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": 4, # Number of components
+    "N": 10, # Number of components
     "alpha": 1, # rate of failure, do not change
     "tau": 100, # Rate of repair
     "p": 12000, # Penalty for system going down
@@ -32,9 +32,8 @@ PARAMS = {
 }
 
 
-EPSILON = 1e-11  # Error for policy evaluation
-THETA = 1e-11  # Error for value iteration (see 6.3.3 of Puterman)
-TOL = 1e-6 # Tolerance for testing equality of policy iteration and value iteration
+EPSILON = 1e-8  # Error for policy evaluation
+THETA = 1e-8  # Error for value iteration
 
 if PARAMS["gamma"] != 1:
     EPSILON = max((1-PARAMS["gamma"])/(PARAMS["gamma"]) * EPSILON, 1e-14)

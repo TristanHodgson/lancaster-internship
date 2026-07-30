@@ -1,4 +1,5 @@
-from modules.utils import action_from_state, policy_sum, argmax_policy_sum, argmax_policy_sum_gamma_1, greedy_policy, policy_sum_gamma_1, span_norm, argmax_policy_sum_gamma_1
+import numpy as np
+from modules.utils import action_from_state, policy_sum, argmax_policy_sum, multichain_policy_gain, greedy_policy, policy_sum_gamma_1, expected_gain_sum, reward_scale, better_action, gain_maximising_actions
 
 #################
 ### Gamma < 1 ###
@@ -49,45 +50,49 @@ def discounted_policy_iteration(mdp, policy, epsilon):
 ### Gamma = 1 ###
 #################
 
-def policy_improvement_gamma_1(mdp, u, policy):
-    for state in mdp.states():
-        if mdp.is_terminal(state):
+
+
+
+def gain_improvement(mdp, g, policy, threshold):
+    # Step 3(a) of Puterman 9.2.1
+    # d_{n+1}(s) \in \argmax_{a} \sum_j p(j | s, a) g(j)
+    return {
+        state: {better_action(
+            state, policy,
+            lambda s, a: expected_gain_sum(mdp, s, a, g),
+            mdp.actions(state), threshold
+        ): 1.0}
+        for state in mdp.states()
+    }
+
+
+def bias_improvement(mdp, g, h, policy, threshold):
+    # Step 3(b) of Puterman 9.2.1
+    # d_{n+1}(s) \in \argmax_{a \in B_s} r(s, a) + \sum_j p(j | s, a) h(j)
+    return {
+        state: {better_action(
+            state, policy,
+            lambda s, a: policy_sum_gamma_1(mdp, s, a, h),
+            gain_maximising_actions(mdp, state, g, threshold), threshold
+        ): 1.0}
+        for state in mdp.states()
+    }
+
+
+def policy_iteration_gamma_1(mdp, policy, tol=1e-8):
+    # Puterman's multichain policy iteration (9.2.1, pg 452)
+    threshold = tol * reward_scale(mdp)
+    while True:
+        g, h = multichain_policy_gain(mdp, policy) # Step 2
+        new_policy = gain_improvement(mdp, g, policy, threshold)  # Step 3(a)
+        if new_policy != policy:
+            policy = new_policy
             continue
-        old_action = action_from_state(state, policy)
-        new_action = argmax_policy_sum_gamma_1(mdp, state, u, old_action)
-        policy[state] = {new_action: 1.0}
-    return policy
+        new_policy = bias_improvement(mdp, g, h, policy, threshold)  # Step 3(b)
+        if new_policy == policy:  # Step 4
+            return policy, h
+        policy = new_policy
 
-
-def policy_evaluation_sweep_gamma_1(mdp, policy, u):
-    for state in mdp.states():
-        if mdp.is_terminal(state):
-            continue
-        action = action_from_state(state, policy)
-        u[state] = policy_sum_gamma_1(mdp, state, action, u)
-    return u
-
-
-def policy_evaluation_gamma_1(mdp, policy, v, epsilon):
-    delta = float("inf")
-    while delta > epsilon:
-        u = policy_evaluation_sweep_gamma_1(mdp, policy, v.copy())
-        delta = span_norm([u[state] - v[state]
-                          for state in mdp.states() if not mdp.is_terminal(state)])
-        ref_val = next(iter(u.values()))
-        v = {state: val - ref_val for state, val in u.items()}
-    return v
-
-
-def policy_iteration_gamma_1(mdp, policy, epsilon):
-    policy_stable = False
-    v = {state: 0 for state in mdp.states()}
-    while not policy_stable:
-        v = policy_evaluation_gamma_1(mdp, policy, v, epsilon)
-        old_policy = policy.copy()
-        policy = policy_improvement_gamma_1(mdp, v, policy)
-        policy_stable = (policy == old_policy)
-    return policy, v
 
 #########################
 ### Combining the two ###
@@ -97,6 +102,6 @@ def policy_iteration_gamma_1(mdp, policy, epsilon):
 def policy_iteration(mdp, initial_policy, epsilon):
     if mdp.gamma < 1:
         policy = greedy_policy(mdp)
-        return discounted_policy_iteration(mdp, policy, epsilon)
+        return policy_iteration(mdp, policy, epsilon)
     else:
-        return policy_iteration_gamma_1(mdp, initial_policy, epsilon)
+        return policy_iteration_gamma_1(mdp, initial_policy)
