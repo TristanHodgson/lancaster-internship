@@ -1,4 +1,4 @@
-from modules.helper import max_policy_sum, argmax_policy_sum
+from modules.utils import max_policy_sum, argmax_policy_sum
 
 
 def value_iteration(mdp, epsilon):

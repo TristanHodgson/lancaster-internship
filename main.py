@@ -6,9 +6,9 @@ import tabulate
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
-from modules.helper import action_from_state, greedy_policy, all_close, graph_policy, get_max_action, policy_gain, policy_gain_gamma_1
+from modules.helper import graph_policy, policy_gain_gamma_1, policy_gain
+from modules.utils import repair_all_policy, greedy_policy 
 from modules.lp import lp
-from modules.helper import action_from_state, greedy_policy, repair_all_policy, all_close, graph_policy, get_max_action, policy_gain, policy_gain_gamma_1
 
 ########################
 ###  Gurobi License  ###

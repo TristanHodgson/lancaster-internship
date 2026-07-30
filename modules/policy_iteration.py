@@ -1,5 +1,4 @@
-from modules.helper import action_from_state, policy_sum, argmax_policy_sum, argmax_policy_sum_gamma_1, greedy_policy, policy_sum_gamma_1, span_norm, argmax_policy_sum_gamma_1
-from modules.helper import action_from_state, policy_sum, argmax_policy_sum, argmax_policy_sum_gamma_1, greedy_policy, policy_sum_gamma_1, policy_gain_gamma_1
+from modules.utils import action_from_state, policy_sum, argmax_policy_sum, argmax_policy_sum_gamma_1, greedy_policy, policy_sum_gamma_1, span_norm, argmax_policy_sum_gamma_1
 
 #################
 ### Gamma < 1 ###
@@ -17,7 +16,7 @@ def policy_evaluation(mdp, policy, original_value, epsilon):
                 continue
             v = V[state]
             V[state] = policy_sum(
-                mdp, state, action_from_state(mdp, state, policy), V)
+                mdp, state, action_from_state(state, policy), V)
             delta = max(delta, abs(v - V[state]))
     return V
 
@@ -28,7 +27,7 @@ def policy_improvement(mdp, V, policy):
     for state in mdp.states():
         if mdp.is_terminal(state):
             continue
-        old_action = action_from_state(mdp, state, policy)
+        old_action = action_from_state(state, policy)
         # old_action = \pi(state)
         pi_s = argmax_policy_sum(mdp, state, V)
         new_policy[state] = {pi_s: 1}
@@ -54,7 +53,7 @@ def policy_improvement_gamma_1(mdp, u, policy):
     for state in mdp.states():
         if mdp.is_terminal(state):
             continue
-        old_action = action_from_state(mdp, state, policy)
+        old_action = action_from_state(state, policy)
         new_action = argmax_policy_sum_gamma_1(mdp, state, u, old_action)
         policy[state] = {new_action: 1.0}
     return policy
@@ -64,7 +63,7 @@ def policy_evaluation_sweep_gamma_1(mdp, policy, u):
     for state in mdp.states():
         if mdp.is_terminal(state):
             continue
-        action = action_from_state(mdp, state, policy)
+        action = action_from_state(state, policy)
         u[state] = policy_sum_gamma_1(mdp, state, action, u)
     return u
 
