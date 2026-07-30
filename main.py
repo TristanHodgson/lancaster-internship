@@ -23,10 +23,10 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": 10, # Number of components
+    "N": 8, # Number of components
     "alpha": 1, # rate of failure, do not change
     "tau": 100, # Rate of repair
-    "p": 12000, # Penalty for system going down
+    "p": 1000, # Penalty for system going down
     "r": 1, # Repair cost, do not change
     "gamma": 1 # Discount factor
 }
@@ -72,6 +72,32 @@ print("\n\n\n\n")
 print(f"Gain from PI: {gain_pi:.12f} \t\t\tBias from PI:\n")
 pprint(bias_pi)
 print(f"Disagreements: {[s for s in mdp.states() if LP_policy[s] != PI_policy[s]]}")
+
+
+########################
+### Testing equality ###
+########################
+
+failures = []
+for N in range(4,12,2):
+    for P in [10**i for i in range(2,7,1)]:
+        PARAMS["N"] = N
+        PARAMS["p"] = P
+        PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
+        actions = generate_mdp(**PARAMS)
+        mdp = MDP(actions=actions, gamma=1)
+        initial_policy = repair_all_policy(mdp)
+        PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+        LP_policy = lp(mdp)
+        if PI_policy != LP_policy:
+            disagreement_states = [s for s in mdp.states() if LP_policy[s] != PI_policy[s]]
+            print(f"Disagreement for N={N}, P={P}: {disagreement_states}")
+            graph_policy(mdp, LP_policy, N, title=f"LP Policy Heatmap for N={N}, P={P}")
+            # graph_policy(mdp, PI_policy, N, title=f"PI Policy Heatmap for N={N}, P={P}")
+            failures.append((N, P, disagreement_states))
+
+
+print(tabulate.tabulate(failures, headers=["N", "P", "Disagreement States"], tablefmt="github"))
 
 ########################
 ###    Speed Test    ###

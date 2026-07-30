@@ -17,6 +17,7 @@ def lp_action(mdp, s, x, y, tol):
         print(f"State {s} is transient,")
     return max(values, key=lambda a: values[a])
 
+
 def solve_lp(mdp):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
