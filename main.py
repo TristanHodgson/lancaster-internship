@@ -23,10 +23,10 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": 6, # Number of components
+    "N": 4, # Number of components
     "alpha": 1, # rate of failure, do not change
     "tau": 100, # Rate of repair
-    "p": 1200, # Penalty for system going down
+    "p": 12000, # Penalty for system going down
     "r": 1, # Repair cost, do not change
     "gamma": 1 # Discount factor
 }
@@ -58,10 +58,19 @@ LP_policy = lp(mdp)
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
 
-gain_lp, bias_lp = policy_gain_gamma_1(mdp, LP_policy)
-gain_pi, bias_pi = policy_gain_gamma_1(mdp, PI_policy)
-print(f"Gain from LP: {gain_lp:.12f}")
-print(f"Gain from PI: {gain_pi:.12f}")
+if PARAMS["gamma"] == 1:
+    gain_lp, bias_lp = policy_gain_gamma_1(mdp, LP_policy)
+    gain_pi, bias_pi = policy_gain_gamma_1(mdp, PI_policy)
+else:
+    gain_lp, bias_lp = policy_gain(mdp, LP_policy)
+    gain_pi, bias_pi = policy_gain(mdp, PI_policy)
+
+
+print(f"Gain from LP: {gain_lp:.12f} \t\t\tBias from LP:\n")
+pprint(bias_lp)
+print("\n\n\n\n")
+print(f"Gain from PI: {gain_pi:.12f} \t\t\tBias from PI:\n")
+pprint(bias_pi)
 print(f"Disagreements: {[s for s in mdp.states() if LP_policy[s] != PI_policy[s]]}")
 
 # VI_policy, VI_V = value_iteration(mdp, THETA)
