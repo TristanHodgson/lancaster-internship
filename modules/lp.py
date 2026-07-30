@@ -14,6 +14,7 @@ def lp_action(mdp, s, x, y, tol):
     values = {a: max(0.0, pulp.value(x[(s, a)]) or 0.0) for a in mdp.actions(s)} # Gurobi can return small negatives
     if sum(values.values()) <= tol:
         values = {a: max(0.0, pulp.value(y[(s, a)]) or 0.0) for a in mdp.actions(s)}
+        print(f"State {s} is transient,")
     return max(values, key=lambda a: values[a])
 
 def solve_lp(mdp):
@@ -81,13 +82,13 @@ def solve_lp_gamma_1(mdp, tol=1e-9):
     # Stage 1: maximise the gain
     gain = pulp.lpSum(gain_terms)
     prob += gain # Stage 1 objective
-    prob.solve(gurobi_solver(tol))
+    prob.solve(gurobi_solver())
     g = pulp.value(prob.objective)
 
     # Stage 2: maximise the bias, holding the gain at g*
     prob += (gain >= g - tol)
     prob += pulp.lpSum(bias_terms) - g * pulp.lpSum(y.values()) # Stage 2 objective
-    prob.solve(gurobi_solver(tol))
+    prob.solve(gurobi_solver())
 
     return {s: {lp_action(mdp, s, x, y, tol): 1.0} for s in mdp.states()}
 

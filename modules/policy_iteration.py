@@ -67,11 +67,13 @@ def policy_evaluation_sweep_gamma_1(mdp, policy, u):
         u[state] = policy_sum_gamma_1(mdp, state, action, u)
     return u
 
+
 def policy_evaluation_gamma_1(mdp, policy, v, epsilon):
     delta = float("inf")
     while delta > epsilon:
         u = policy_evaluation_sweep_gamma_1(mdp, policy, v.copy())
-        delta = span_norm([u[state] - v[state] for state in mdp.states() if not mdp.is_terminal(state)])
+        delta = span_norm([u[state] - v[state]
+                          for state in mdp.states() if not mdp.is_terminal(state)])
         ref_val = next(iter(u.values()))
         v = {state: val - ref_val for state, val in u.items()}
     return v

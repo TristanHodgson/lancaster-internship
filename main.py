@@ -51,12 +51,13 @@ actions = generate_mdp(**PARAMS)
 mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 initial_policy = repair_all_policy(mdp)
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+# VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy = lp(mdp)
 
-# assert PI_policy == LP_policy, "Policy Iteration and LP did not converge to the same policy"
 
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
+# graph_policy(mdp, VI_policy, PARAMS["N"])
 
 if PARAMS["gamma"] == 1:
     gain_lp, bias_lp = policy_gain_gamma_1(mdp, LP_policy)
@@ -72,11 +73,6 @@ print("\n\n\n\n")
 print(f"Gain from PI: {gain_pi:.12f} \t\t\tBias from PI:\n")
 pprint(bias_pi)
 print(f"Disagreements: {[s for s in mdp.states() if LP_policy[s] != PI_policy[s]]}")
-
-# VI_policy, VI_V = value_iteration(mdp, THETA)
-# assert all_close(PI_V, VI_V, tol=TOL), "Policy Iteration and Value Iteration did not converge to the same value function"
-# graph_policy(mdp, PI_policy, PARAMS["N"])
-
 
 ########################
 ###    Speed Test    ###
