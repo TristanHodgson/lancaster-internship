@@ -24,14 +24,14 @@ class MDP:
         return {state for state in self.states() if self.is_terminal(state)}
 
 
-def reward_function(state, action, r,  p, N, gamma):
+def reward_function(state, action, r,  p, N, k=1):
     cost = r * (state[0] + action)
-    if state[0] + state[1] == N:
+    if state[0] + state[1] > N-k:
         cost += p
     return -cost
 
 
-def generate_mdp(N, alpha, tau, p, r, delta, gamma):
+def generate_mdp(N, alpha, tau, p, r, delta, gamma, k=1):
     model = {}
     for s1 in range(N + 1):
         for s2 in range(N + 1 - s1):
@@ -42,19 +42,19 @@ def generate_mdp(N, alpha, tau, p, r, delta, gamma):
                     (N - s1 - s2)*alpha * delta,
                     (s1 + action, s2 - action + 1),
                     # delta * reward_function(state, action, r, p, N, gamma)
-                    reward_function(state, action, r, p, N, gamma)
+                    reward_function(state, action, r, p, N, k)
                 )
                 repair = (
                     (s1 + action)*tau * delta,
                     (s1 + action - 1, s2 - action),
                     # delta * reward_function(state, action, r, p, N, gamma)
-                    reward_function(state, action, r, p, N, gamma)
+                    reward_function(state, action, r, p, N, k)
                 )
                 nothing = (
                     1 - degradation[0] - repair[0],
                     (s1 + action, s2 - action),
                     # delta * reward_function(state, action, r,  p, N,gamma)
-                    reward_function(state, action, r, p, N, gamma)
+                    reward_function(state, action, r, p, N, k)
                 )
                 outcomes = [degradation, repair, nothing]
                 actions[action] = [outcome for outcome in outcomes if outcome[0] > 0]

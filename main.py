@@ -28,7 +28,8 @@ PARAMS = {
     "tau": 100, # Rate of repair
     "p": 1000, # Penalty for system going down
     "r": 1, # Repair cost, do not change
-    "gamma": 1 # Discount factor
+    "gamma": 1, # Discount factor
+    "k": 1 # k out of N system
 }
 
 
