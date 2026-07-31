@@ -12,10 +12,11 @@ def lp_action(mdp, s, x, y, tol):
     # State is recurrent (i.e. sum(x) != 0) under the optimal policy => use max x variable
     # State is transient under the optimal policy => use max y variable
     values = {a: max(0.0, pulp.value(x[(s, a)]) or 0.0) for a in mdp.actions(s)} # Gurobi can return small negatives
-    if sum(values.values()) <= tol:
+    transient = sum(values.values()) <= tol
+    if transient:
         values = {a: max(0.0, pulp.value(y[(s, a)]) or 0.0) for a in mdp.actions(s)}
         print(f"State {s} is transient,")
-    return max(values, key=lambda a: values[a])
+    return max(values, key=lambda a: values[a]), transient
 
 
 def solve_lp(mdp):
@@ -91,8 +92,16 @@ def solve_lp_gamma_1(mdp, tol=1e-9):
     prob += pulp.lpSum(bias_terms) - g * pulp.lpSum(y.values()) # Stage 2 objective
     prob.solve(gurobi_solver())
 
-    return {s: {lp_action(mdp, s, x, y, tol): 1.0} for s in mdp.states()}
+    policy = {}
+    transient_states = set()
+    for s in mdp.states():
+        action, transient = lp_action(mdp, s, x, y, tol)
+        policy[s] = {action: 1.0}
+        if transient:
+            transient_states.add(s)
+    print(f"Transient states: {transient_states}")
+    return policy, transient_states
 
 def lp(mdp):
     if mdp.gamma == 1: return solve_lp_gamma_1(mdp)
-    else: return solve_lp(mdp)
+    else: return solve_lp(mdp), set()

@@ -51,7 +51,7 @@ mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 initial_policy = repair_all_policy(mdp)
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 # VI_policy, VI_V = value_iteration(mdp, THETA)
-LP_policy = lp(mdp)
+LP_policy, LP_transient = lp(mdp)
 
 
 graph_policy(mdp, LP_policy, PARAMS["N"])
@@ -88,11 +88,14 @@ for N in range(4,12,2):
         mdp = MDP(actions=actions, gamma=1)
         initial_policy = repair_all_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        LP_policy = lp(mdp)
+        LP_policy, LP_transient = lp(mdp)
         if PI_policy != LP_policy:
-            disagreement_states = [s for s in mdp.states() if LP_policy[s] != PI_policy[s]]
+            disagreement_states = {s for s in mdp.states() if LP_policy[s] != PI_policy[s]}
+            very_bad_states = {s for s in disagreement_states if s not in LP_transient}
             print(f"Disagreement for N={N}, P={P}: {disagreement_states}")
-            graph_policy(mdp, LP_policy, N, title=f"LP Policy Heatmap for N={N}, P={P}")
+            if very_bad_states:
+                print(f"\n\n\nDisagreement for N={N}, P={P} that are not transient: {very_bad_states}\n\n\n")
+            # graph_policy(mdp, LP_policy, N, title=f"LP Policy Heatmap for N={N}, P={P}")
             # graph_policy(mdp, PI_policy, N, title=f"PI Policy Heatmap for N={N}, P={P}")
             failures.append((N, P, disagreement_states))
 
