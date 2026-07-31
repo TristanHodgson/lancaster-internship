@@ -90,3 +90,7 @@ def policy_gain_gamma_1(mdp, policy):
         max(1.0, np.max(np.abs(
             R))), f"Residual {residual:.3e}: policy is multichain, so has no scalar gain"
     return g, {state: h[state_to_idx[state]] for state in mdp.states()}
+
+
+def policy_equal(lp_policy, pi_policy):
+    return all(lp_policy[state] == pi_policy[state] for state in lp_policy)

@@ -6,7 +6,7 @@ import tabulate
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
-from modules.helper import graph_policy, policy_gain_gamma_1, policy_gain
+from modules.helper import graph_policy, policy_equal
 from modules.utils import repair_all_policy, greedy_policy 
 from modules.lp import lp
 
@@ -58,22 +58,6 @@ graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
 # graph_policy(mdp, VI_policy, PARAMS["N"])
 
-if PARAMS["gamma"] == 1:
-    gain_lp, bias_lp = policy_gain_gamma_1(mdp, LP_policy)
-    gain_pi, bias_pi = policy_gain_gamma_1(mdp, PI_policy)
-else:
-    gain_lp, bias_lp = policy_gain(mdp, LP_policy)
-    gain_pi, bias_pi = policy_gain(mdp, PI_policy)
-
-
-print(f"Gain from LP: {gain_lp:.12f} \t\t\tBias from LP:\n")
-pprint(bias_lp)
-print("\n\n\n\n")
-print(f"Gain from PI: {gain_pi:.12f} \t\t\tBias from PI:\n")
-pprint(bias_pi)
-print(f"Disagreements: {[s for s in mdp.states() if LP_policy[s] != PI_policy[s]]}")
-
-
 ########################
 ### Testing equality ###
 ########################
@@ -89,8 +73,8 @@ for N in range(4,12,2):
         initial_policy = repair_all_policy(mdp)
         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
         LP_policy, LP_transient = lp(mdp)
-        if PI_policy != LP_policy:
-            disagreement_states = {s for s in mdp.states() if LP_policy[s] != PI_policy[s]}
+        if not policy_equal(LP_policy, PI_policy):
+            disagreement_states = {s for s in LP_policy.keys() if LP_policy[s] != PI_policy[s]}
             very_bad_states = {s for s in disagreement_states if s not in LP_transient}
             print(f"Disagreement for N={N}, P={P}: {disagreement_states}")
             if very_bad_states:
