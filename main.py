@@ -32,7 +32,6 @@ PARAMS = {
     "k": 1 # k out of N system
 }
 
-
 EPSILON = 1e-8  # Error for policy evaluation
 THETA = 1e-8  # Error for value iteration
 
@@ -68,40 +67,28 @@ graph_policy(mdp, VI_policy, PARAMS["N"])
 # VI only implemented for gamma < 1 so don't try a speed test with gamma = 1
 
 """
-Ns = [10*i for i in range(1, 11)]
-Ps = [10*i for i in range(5, 16)]
-# Remember to set PARAMS["delta"] <= 1 / (PARAMS["N"] * PARAMS["tau"]) for each iteration
-
-start = perf_counter()
-for N in Ns:
-    for P in Ps:
-        PARAMS["N"] = N
-        PARAMS["p"] = P
-        actions = generate_mdp(**PARAMS)
-        mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
-        initial_policy = greedy_policy(mdp)
-        PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        # graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P}")
-end = perf_counter()
-print(f"Time taken for policy iteration: {end - start:.4f} seconds")
-
-start = perf_counter()
-for N in Ns:
-    for P in Ps:
-        PARAMS["N"] = N
-        PARAMS["p"] = P
-        actions = generate_mdp(**PARAMS)
-        mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
-        initial_policy = greedy_policy(mdp)
-        VI_policy, VI_V = value_iteration(mdp, THETA)
-        # graph_policy(mdp, VI_policy, N, title=f"Policy Heatmap for N={N}, P={P}")
-end = perf_counter()
-print(f"Time taken for value iteration: {end - start:.4f} seconds")
+table_data = []
+for gamma in [0.99, 1]:
+    row = []
+    for i in ["PI", "VI", "LP"]:
+        start = perf_counter()
+        for _ in range(200):
+            if i == "PI":
+                PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+            elif i == "VI":
+                VI_policy, VI_V = value_iteration(mdp, THETA)
+            elif i == "LP":
+                LP_policy, LP_transient = lp(mdp)
+        end = perf_counter()
+        row.append(end - start)
+    table_data.append([gamma] + row)
+print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
 """
 
-# Time taken for policy iteration: 135.5179 seconds
-# Time taken for value iteration: 2013.8827 secondsPARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
-
+# |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
+# |---------|---------------|---------------|---------------|
+# |  0.9900 |        1.9094 |      160.5837 |        1.2762 |
+# |  1.0000 |        4.0650 |      159.5761 |        1.8190 |
 
 ########################
 ###    Experiment    ###
