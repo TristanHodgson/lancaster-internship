@@ -50,42 +50,15 @@ PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
 actions = generate_mdp(**PARAMS)
 mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 initial_policy = repair_all_policy(mdp)
+
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-# VI_policy, VI_V = value_iteration(mdp, THETA)
+VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
 
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
-# graph_policy(mdp, VI_policy, PARAMS["N"])
-
-########################
-### Testing equality ###
-########################
-
-failures = []
-for N in range(4,12,2):
-    for P in [10**i for i in range(2,7,1)]:
-        PARAMS["N"] = N
-        PARAMS["p"] = P
-        PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
-        actions = generate_mdp(**PARAMS)
-        mdp = MDP(actions=actions, gamma=1)
-        initial_policy = repair_all_policy(mdp)
-        PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-        LP_policy, LP_transient = lp(mdp)
-        if not policy_equal(LP_policy, PI_policy):
-            disagreement_states = {s for s in LP_policy.keys() if LP_policy[s] != PI_policy[s]}
-            very_bad_states = {s for s in disagreement_states if s not in LP_transient}
-            print(f"Disagreement for N={N}, P={P}: {disagreement_states}")
-            if very_bad_states:
-                print(f"\n\n\nDisagreement for N={N}, P={P} that are not transient: {very_bad_states}\n\n\n")
-            # graph_policy(mdp, LP_policy, N, title=f"LP Policy Heatmap for N={N}, P={P}")
-            # graph_policy(mdp, PI_policy, N, title=f"PI Policy Heatmap for N={N}, P={P}")
-            failures.append((N, P, disagreement_states))
-
-
-print(tabulate.tabulate(failures, headers=["N", "P", "Disagreement States"], tablefmt="github"))
+graph_policy(mdp, VI_policy, PARAMS["N"])
 
 ########################
 ###    Speed Test    ###
