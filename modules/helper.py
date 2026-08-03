@@ -83,3 +83,5 @@ def evaluate_policy(mdp, policy, reward):
 def uptime(mdp, policy, N, k=1):
     # Gain of the indicator of the system being healthy
     return evaluate_policy(mdp, policy, lambda state, action: state[0] + state[1] <= N - k)
+
+    

@@ -7,7 +7,7 @@ from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
 from modules.helper import graph_policy, policy_equal, uptime
-from modules.utils import repair_all_policy, greedy_policy 
+from modules.utils import repair_all_policy, greedy_policy
 from modules.lp import lp
 
 ########################
@@ -28,8 +28,8 @@ PARAMS = {
     "tau": 100, # Rate of repair
     "p": 1000, # Penalty for system going down
     "r": 1, # Repair cost, do not change
-    "gamma": 0.99, # Discount factor
-    "k": 1 # k out of N system
+    "gamma": 1, # Discount factor
+    "k": 1 # Number of components needed to be healthy
 }
 
 EPSILON = 1e-8  # Error for policy evaluation
@@ -54,9 +54,16 @@ PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
+graph_policy(mdp, LP_policy, PARAMS["N"])
+
+# Fill in missing states in LP_policy with the maximum possible action
+for state in mdp.states():
+    if state not in LP_policy:
+        LP_policy[state] = {max(mdp.actions(state)): 1}
+
 print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
 print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
-# print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
+print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
@@ -117,3 +124,36 @@ graph_policy(mdp, VI_policy, PARAMS["N"])
 #         table_data.append([N, P * N, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
 
 # print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))
+
+
+###########################
+### Binary Search for P ###
+###########################
+
+# def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
+#     if b-a < 0.01:
+#         return int((a + b) / 2)
+#     # Finding uptime for p=(a+b)/2
+#     actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
+#     mdp = MDP(actions=actions, gamma=gamma)
+#     initial_policy = repair_all_policy(mdp)
+#     PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
+#     actual_uptime = uptime(mdp, PI_policy, N, k)
+#     # Next iteration
+#     # print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}")
+#     if actual_uptime < target_uptime:
+#         return uptime_binary_search(target_uptime, (a+b)/2, b, N, tau, gamma, k, alpha, r)
+#     else:
+#         return uptime_binary_search(target_uptime, a, (a+b)/2, N, tau, gamma, k, alpha, r)
+
+
+# uptime_p = uptime_binary_search(
+#     target_uptime=0.999999999,
+#     a=0,
+#     b=100000,
+#     N=10,
+#     tau=500,
+#     gamma=1,
+#     k=1
+# )
+# print(f"Binary search for P to achieve uptime of 0.999999999: {uptime_p}")
