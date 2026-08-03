@@ -6,7 +6,7 @@ import tabulate
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
-from modules.helper import graph_policy, policy_equal
+from modules.helper import graph_policy, policy_equal, uptime
 from modules.utils import repair_all_policy, greedy_policy 
 from modules.lp import lp
 
@@ -28,7 +28,7 @@ PARAMS = {
     "tau": 100, # Rate of repair
     "p": 1000, # Penalty for system going down
     "r": 1, # Repair cost, do not change
-    "gamma": 1, # Discount factor
+    "gamma": 0.99, # Discount factor
     "k": 1 # k out of N system
 }
 
@@ -54,6 +54,9 @@ PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
+print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
+print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
+# print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
 graph_policy(mdp, LP_policy, PARAMS["N"])
 graph_policy(mdp, PI_policy, PARAMS["N"])
@@ -64,31 +67,34 @@ graph_policy(mdp, VI_policy, PARAMS["N"])
 ########################
 
 # Commented out to speed up run time. Results below.
-# VI only implemented for gamma < 1 so don't try a speed test with gamma = 1
 
-"""
-table_data = []
-for gamma in [0.99, 1]:
-    row = []
-    for i in ["PI", "VI", "LP"]:
-        start = perf_counter()
-        for _ in range(200):
-            if i == "PI":
-                PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-            elif i == "VI":
-                VI_policy, VI_V = value_iteration(mdp, THETA)
-            elif i == "LP":
-                LP_policy, LP_transient = lp(mdp)
-        end = perf_counter()
-        row.append(end - start)
-    table_data.append([gamma] + row)
-print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
-"""
 
-# |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
-# |---------|---------------|---------------|---------------|
-# |  0.9900 |        1.9094 |      160.5837 |        1.2762 |
-# |  1.0000 |        4.0650 |      159.5761 |        1.8190 |
+# table_data = []
+# for gamma in [1-10**(-i) for i in range(2,7)] + [1]:
+#     row = []
+#     for i in ["PI", "VI", "LP"]:
+#         start = perf_counter()
+#         for _ in range(500):
+#             if i == "PI":
+#                 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+#             elif i == "VI":
+#                 VI_policy, VI_V = value_iteration(mdp, THETA)
+#             elif i == "LP":
+#                 LP_policy, LP_transient = lp(mdp)
+#         end = perf_counter()
+#         row.append(end - start)
+#     table_data.append([gamma] + row)
+# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
+
+
+# |     Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
+# |-----------|---------------|---------------|---------------|
+# |  0.990000 |        3.6834 |      219.6479 |        2.4225 |
+# |  0.999000 |        3.7741 |      221.0431 |        2.4227 |
+# |  0.999900 |        3.7732 |      223.5712 |        2.4269 |
+# |  0.999990 |        3.7714 |      224.3156 |        2.3885 |
+# |  0.999999 |        3.7537 |      224.9884 |        2.3967 |
+# |  1.000000 |        3.7694 |      220.9227 |        2.4012 |
 
 ########################
 ###    Experiment    ###

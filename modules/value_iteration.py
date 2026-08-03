@@ -1,6 +1,6 @@
 from modules.utils import max_policy_sum, argmax_policy_sum, policy_sum_gamma_1, argmax_policy_sum_gamma_1, span_norm
 
-def value_iteration(mdp, epsilon):
+def discounted_value_iteration(mdp, epsilon):
     V = {state: 0 for state in mdp.states()}
     delta = float("inf")
     while delta > epsilon:
@@ -41,4 +41,4 @@ def value_iteration(mdp, epsilon):
     if mdp.gamma == 1:
         return value_iteration_gamma_1(mdp, epsilon)
     else:
-        return value_iteration(mdp, epsilon)
+        return discounted_value_iteration(mdp, epsilon)

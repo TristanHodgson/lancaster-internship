@@ -102,6 +102,6 @@ def policy_iteration_gamma_1(mdp, policy, tol=1e-8):
 def policy_iteration(mdp, initial_policy, epsilon):
     if mdp.gamma < 1:
         policy = greedy_policy(mdp)
-        return policy_iteration(mdp, policy, epsilon)
+        return discounted_policy_iteration(mdp, policy, epsilon)
     else:
         return policy_iteration_gamma_1(mdp, initial_policy)

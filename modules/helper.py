@@ -1,6 +1,7 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from modules.utils import action_from_state
+import numpy as np
+from modules.mdp import MDP
+from modules.utils import action_from_state, policy_matrices
 
 
 def all_close(V1, V2, tol=1e-8):
@@ -43,54 +44,42 @@ def graph_policy(mdp, policy, N, title="Policy Heatmap", SAVE=False, filename="p
     plt.close(fig)
 
 
+def policy_equal(lp_policy, pi_policy):
+    return all(lp_policy[state] == pi_policy[state] for state in lp_policy)
+
+
 def policy_gain(mdp, policy):
-    n = len(mdp.states())
-    state_to_idx = {state: i for i, state in enumerate(mdp.states())}
-    P = np.zeros((n, n))  # Transition matrix
-    R = np.zeros(n)  # Reward vector
-    for s in mdp.states():
-        if mdp.is_terminal(s):
-            continue
-        i = state_to_idx[s]
-        for a, action_prob in policy.get(s, {}).items():
-            for prob, next_s, reward in mdp.outcomes(s, a):
-                j = state_to_idx[next_s]
-                P[i, j] += action_prob * prob
-                R[i] += action_prob * prob * reward
-    I = np.eye(n)
-    # Solve the linear system (I - gamma * P) * V = R
-    V = np.linalg.solve(I - (mdp.gamma * P), R)
-    # Re-map the calculated values back to their corresponding states
-    return {state: V[i] for i, state in enumerate(mdp.states())}
+    # Solves (I - gamma P) V = R for the expected total discounted reward
+    _, P, R = policy_matrices(mdp, policy)
+    return np.linalg.solve(np.eye(len(R)) - mdp.gamma * P, R).mean()
 
 
 def policy_gain_gamma_1(mdp, policy):
-    # Solves the evaluation equations g + (I - P) h = R exactly for the gain g and the bias h
-    # h is only defined up to a constant, so we pin h = 0 at the last state by replacing that
-    # column of (I - P) with ones, which puts g in its place
-    n = len(mdp.states())
-    state_to_idx = {state: i for i, state in enumerate(mdp.states())}
-    P = np.zeros((n, n))  # Transition matrix
-    R = np.zeros(n)  # Reward vector
-    for s in mdp.states():
-        i = state_to_idx[s]
-        for a, action_prob in policy[s].items():
-            for prob, next_s, reward in mdp.outcomes(s, a):
-                P[i, state_to_idx[next_s]] += action_prob * prob
-                R[i] += action_prob * prob * reward
-
-    A = np.eye(n) - P
+    # Solves the evaluation equations g + (I - P) h = R for the scalar gain g
+    # h is only defined up to a constant, so we pin h = 0 at the last state by replacing that column of (I - P) with ones, which puts g in its place
+    _, P, R = policy_matrices(mdp, policy)
+    A = np.eye(len(R)) - P
     A[:, -1] = 1.0
-    # Not lstsq: A is singular exactly when the policy is multichain
     x = np.linalg.solve(A, R)
     g, h = x[-1], np.append(x[:-1], 0.0)
-    # A scalar gain only solves the equations if the policy is unichain, so we always check
-    residual = np.max(np.abs(g + h - P @ h - R))
-    assert residual <= 1e-8 * \
-        max(1.0, np.max(np.abs(
-            R))), f"Residual {residual:.3e}: policy is multichain, so has no scalar gain"
-    return g, {state: h[state_to_idx[state]] for state in mdp.states()}
+    return g
 
 
-def policy_equal(lp_policy, pi_policy):
-    return all(lp_policy[state] == pi_policy[state] for state in lp_policy)
+def policy_mrp(mdp, policy, reward):
+    # The Markov reward process induced by policy with the reward function replaced
+    actions = {state: action_from_state(state, policy)
+                for state in mdp.states()}
+    return MDP({state: {actions[state]: [(prob, next_state, reward(state, actions[state]))
+                                            for prob, next_state, _ in mdp.outcomes(state, actions[state])]}
+                                            for state in mdp.states()}, mdp.gamma)
+
+
+def evaluate_policy(mdp, policy, reward):
+    # Gives the gain of the Markov reward process induced by the policy under the reward function
+    mrp = policy_mrp(mdp, policy, reward)
+    return policy_gain_gamma_1(mrp, policy) if mdp.gamma == 1 else policy_gain(mrp, policy)
+
+
+def uptime(mdp, policy, N, k=1):
+    # Gain of the indicator of the system being healthy
+    return evaluate_policy(mdp, policy, lambda state, action: state[0] + state[1] <= N - k)

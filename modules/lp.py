@@ -1,8 +1,8 @@
 import pulp
+import gurobipy as gp
 
 
 def gurobi_solver(tol=1e-9):
-    # TODO: check settings
     return pulp.GUROBI(msg=False, Presolve=0, NumericFocus=3, FeasibilityTol=tol, OptimalityTol=tol)
 
 
