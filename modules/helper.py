@@ -77,7 +77,7 @@ def policy_mrp(mdp, policy, reward):
 def evaluate_policy(mdp, policy, reward):
     # Gives the gain of the Markov reward process induced by the policy under the reward function
     mrp = policy_mrp(mdp, policy, reward)
-    return policy_gain_gamma_1(mrp, policy) if mdp.gamma == 1 else policy_gain(mrp, policy)
+    return policy_gain_gamma_1(mrp, policy)
 
 
 def uptime(mdp, policy, N, k=1):

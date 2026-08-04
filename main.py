@@ -2,6 +2,8 @@ from time import perf_counter
 from tqdm import tqdm
 from pprint import pprint
 import tabulate
+import matplotlib.pyplot as plt
+import numpy as np
 
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
@@ -51,10 +53,10 @@ mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 initial_policy = repair_all_policy(mdp)
 
 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-VI_policy, VI_V = value_iteration(mdp, THETA)
+# VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
-graph_policy(mdp, LP_policy, PARAMS["N"])
+# graph_policy(mdp, LP_policy, PARAMS["N"])
 
 # Fill in missing states in LP_policy with the maximum possible action
 for state in mdp.states():
@@ -62,12 +64,12 @@ for state in mdp.states():
         LP_policy[state] = {max(mdp.actions(state)): 1}
 
 print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
-print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
+# print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
 print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
-graph_policy(mdp, LP_policy, PARAMS["N"])
-graph_policy(mdp, PI_policy, PARAMS["N"])
-graph_policy(mdp, VI_policy, PARAMS["N"])
+# graph_policy(mdp, LP_policy, PARAMS["N"])
+# graph_policy(mdp, PI_policy, PARAMS["N"])
+# graph_policy(mdp, VI_policy, PARAMS["N"])
 
 ########################
 ###    Speed Test    ###
@@ -130,21 +132,21 @@ graph_policy(mdp, VI_policy, PARAMS["N"])
 ### Binary Search for P ###
 ###########################
 
-# def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
-#     if b-a < 0.01:
-#         return int((a + b) / 2)
-#     # Finding uptime for p=(a+b)/2
-#     actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
-#     mdp = MDP(actions=actions, gamma=gamma)
-#     initial_policy = repair_all_policy(mdp)
-#     PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
-#     actual_uptime = uptime(mdp, PI_policy, N, k)
-#     # Next iteration
-#     # print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}")
-#     if actual_uptime < target_uptime:
-#         return uptime_binary_search(target_uptime, (a+b)/2, b, N, tau, gamma, k, alpha, r)
-#     else:
-#         return uptime_binary_search(target_uptime, a, (a+b)/2, N, tau, gamma, k, alpha, r)
+def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
+    if b-a < 0.01:
+        return int((a + b) / 2)
+    # Finding uptime for p=(a+b)/2
+    actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
+    mdp = MDP(actions=actions, gamma=gamma)
+    initial_policy = repair_all_policy(mdp)
+    PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
+    actual_uptime = uptime(mdp, PI_policy, N, k)
+    # Next iteration
+    # print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}")
+    if actual_uptime < target_uptime:
+        return uptime_binary_search(target_uptime, (a+b)/2, b, N, tau, gamma, k, alpha, r)
+    else:
+        return uptime_binary_search(target_uptime, a, (a+b)/2, N, tau, gamma, k, alpha, r)
 
 
 # uptime_p = uptime_binary_search(
@@ -157,3 +159,27 @@ graph_policy(mdp, VI_policy, PARAMS["N"])
 #     k=1
 # )
 # print(f"Binary search for P to achieve uptime of 0.999999999: {uptime_p}")
+
+
+########################
+###   Monotonicity   ###
+########################
+
+table_data = []
+
+for p in range(1,100000, 100):
+    actions = generate_mdp(N=10, alpha=1, tau=500, p=p, r=1, gamma=1, delta=1/(10*500), k=1)
+    mdp = MDP(actions=actions, gamma=1)
+    initial_policy = repair_all_policy(mdp)
+    PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
+    actual_uptime = uptime(mdp, PI_policy, 10, 1)
+    table_data.append([p, actual_uptime])
+
+plt.plot([row[0] for row in table_data], [-np.log(1-row[1]) for row in table_data], color="#426A5A")
+plt.title("Uptime vs P for N=10, tau=500, gamma=1, k=1")
+plt.xlabel("P")
+plt.ylabel("9s of Uptime, -log(Downtime)")
+plt.savefig("plots/monotonicity_10_500_1_1.svg", format="svg")
+plt.show()
+
+print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
