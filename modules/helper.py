@@ -68,20 +68,18 @@ def policy_gain_gamma_1(mdp, policy):
 def policy_mrp(mdp, policy, reward):
     # The Markov reward process induced by policy with the reward function replaced
     actions = {state: action_from_state(state, policy)
-                for state in mdp.states()}
+               for state in mdp.states()}
     return MDP({state: {actions[state]: [(prob, next_state, reward(state, actions[state]))
-                                            for prob, next_state, _ in mdp.outcomes(state, actions[state])]}
-                                            for state in mdp.states()}, mdp.gamma)
+                                         for prob, next_state, _ in mdp.outcomes(state, actions[state])]}
+                for state in mdp.states()}, mdp.gamma)
 
 
 def evaluate_policy(mdp, policy, reward):
     # Gives the gain of the Markov reward process induced by the policy under the reward function
     mrp = policy_mrp(mdp, policy, reward)
-    return policy_gain_gamma_1(mrp, policy)
+    return policy_gain_gamma_1(mrp, policy) if mdp.gamma == 1.0 else policy_gain(mrp, policy)
 
 
 def uptime(mdp, policy, N, k=1):
     # Gain of the indicator of the system being healthy
     return evaluate_policy(mdp, policy, lambda state, action: state[0] + state[1] <= N - k)
-
-    
