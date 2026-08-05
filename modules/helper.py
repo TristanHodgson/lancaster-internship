@@ -9,7 +9,7 @@ def all_close(V1, V2, tol=1e-8):
     return all(abs(V1[state] - V2[state]) < tol for state in V1)
 
 
-def graph_policy(mdp, policy, N, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
+def graph_policy(policy, N, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
     policy_matrix = np.full((N + 1, N + 1), np.nan)
 
     for s1 in range(N + 1):

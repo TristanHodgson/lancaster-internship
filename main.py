@@ -56,7 +56,7 @@ PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
-# graph_policy(mdp, LP_policy, PARAMS["N"])
+# graph_policy( LP_policy, PARAMS["N"])
 
 # Fill in missing states in LP_policy with the maximum possible action
 for state in mdp.states():
@@ -67,9 +67,9 @@ print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
 print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
-# graph_policy(mdp, LP_policy, PARAMS["N"])
-# graph_policy(mdp, PI_policy, PARAMS["N"])
-# graph_policy(mdp, VI_policy, PARAMS["N"])
+# graph_policy(LP_policy, PARAMS["N"])
+# graph_policy(PI_policy, PARAMS["N"])
+# graph_policy(VI_policy, PARAMS["N"])
 
 ########################
 ###    Speed Test    ###
@@ -122,7 +122,7 @@ print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}
 #         mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
 #         initial_policy = greedy_policy(mdp)
 #         PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
-#         graph_policy(mdp, PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N }, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N}_t{PARAMS['tau']}")
+#         graph_policy(PI_policy, N, title=f"Policy Heatmap for N={N}, P={P * N }, tau={PARAMS['tau']}, gamma={PARAMS['gamma']}", SAVE=True, filename=f"gamma{PARAMS['gamma']}_N{N}_P{P * N}_t{PARAMS['tau']}")
 #         table_data.append([N, P * N, get_max_action(PI_policy)[0], get_max_action(PI_policy)[1]])
 
 # print(tabulate.tabulate(table_data, headers=["N", "P", "Max Action State", "Max Action"], tablefmt="github"))
