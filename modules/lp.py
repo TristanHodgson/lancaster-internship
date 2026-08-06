@@ -3,22 +3,15 @@ import gurobipy as gp
 
 
 def gurobi_solver(tol=1e-9):
-    return pulp.GUROBI(msg=False, Presolve=0, NumericFocus=3, FeasibilityTol=tol, OptimalityTol=tol)
+    return pulp.GUROBI(msg=False, Method=1, Presolve=0, NumericFocus=3, FeasibilityTol=tol, OptimalityTol=tol)
 
 
-def lp_action(mdp, s, x, tol):
-    # Given a state s and the LP variables x, returns the action maximising x_{s, a},
-    # or None if x_{s, a} = 0 for every a
-    values = {a: max(0, pulp.value(x[(s, a)]) or 0) for a in mdp.actions(s)} # Gurobi can return small negatives
-    if sum(values.values()) <= tol:
-        return None
-    return max(values, key=lambda a: values[a])
-
-def solve_lp(mdp):
+def solve_lp(mdp, target_uptime=None, N_k = None):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
     #   \sum_{a \in A(j)} x_{j, a} - \gamma \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = \alpha_j \quad \forall j \in S 
     #   x_{s, a} \ge 0 \quad \forall s \in S, \forall a \in A(s)
+    # Note N_k is N - k, only needed if target_uptime is set
     prob = pulp.LpProblem("MDP_LP_Discounted", pulp.LpMaximize)
     x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     alpha = 1.0 / len(list(mdp.states())) # vector that has to be positive, stochastic; we simplify to a scalar
@@ -37,50 +30,70 @@ def solve_lp(mdp):
         condition_term1 = pulp.lpSum(x[(j, a)] for a in mdp.actions(j)) # \sum_{a \in A(j)} x_{j, a}
         prob += (condition_term1 - mdp.gamma * pulp.lpSum(condition_term2[j]) == alpha) # Adding the whole of the first condition
 
+    if target_uptime is not None:
+        # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime \ge U
+        prob += (pulp.lpSum(((s[0] + s[1] <= N_k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
+
     prob.solve(gurobi_solver()) # Solve using Gurobi
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
-    # Here \sum_a x_{j,a} = \alpha_j + \gamma \sum P(j|s,a) x_{s,a} >= \alpha > 0 at every state,
-    # so the argmax is always well determined and needs no fallback
-    return {s: {max(mdp.actions(s), key=lambda a: pulp.value(x[(s, a)]) or 0.0): 1.0} for s in mdp.states()}
+    # Puterman (6.9.4): q_{d(s)}(a) = \frac{x_{s, a}}{\sum_{a'} x_{s, a'}}
+    values = {s: {a: max(0, pulp.value(x[(s, a)]) or 0) for a in mdp.actions(s)} for s in mdp.states()} # Gurobi can return small negatives
+    return {s: {a: v / sum(vs.values()) for a, v in vs.items() if v > 0} for s, vs in values.items()}
 
-# Unichain LP from 8.8 of Puterman
-def solve_lp_gamma_1(mdp, tol=1e-9):
+
+# Multichain LP from 9.3 of Puterman
+def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=1):
     # Maximises \sum_{s, a} r(s, a) x_{s, a}
     # Subject to:
     #   \forall j \in S \qquad \sum_{a \in A(j)} x_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = 0
-    #   \sum_{s \in S} \sum_{a \in A(s)} x_{s, a} = 1
-    #   x_{s, a} \ge 0
+    #   \forall j \in S \qquad \sum_{a \in A(j)} x_{j, a} + \sum_{a \in A(j)} y_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) y_{s, a} = \alpha_j
+    #   x_{s, a} \ge 0, y_{s, a} \ge 0
     prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMaximize)
     x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
+    y = {(s, a): pulp.LpVariable(f"y_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
+    alpha = 1.0 / len(list(mdp.states()))
 
     objective = []
-    condition_term2 = {s: [] for s in mdp.states()}
+    condition1_term2 = {s: [] for s in mdp.states()}
+    condition2_term3 = {s: [] for s in mdp.states()}
     for s in mdp.states():
         for a in mdp.actions(s):
             expected_reward = sum(p * r for p, _, r in mdp.outcomes(s, a)) # r(s,a)
             objective.append(expected_reward * x[(s, a)]) # r(s,a) * x_{s,a}
             for p, next_s, _ in mdp.outcomes(s, a):
-                condition_term2[next_s].append(p * x[(s, a)]) # P(j | s, a) x_{s, a}
+                condition1_term2[next_s].append(p * x[(s, a)]) # P(j | s, a) x_{s, a}
+                condition2_term3[next_s].append(p * y[(s, a)]) # P(j | s, a) y_{s, a}
     prob += pulp.lpSum(objective) # Set the objective as the sum of the elements of the list
 
     for j in mdp.states():
-        condition_term1 = pulp.lpSum(x[(j, a)] for a in mdp.actions(j)) # \sum_{a \in A(j)} x_{j, a}
-        prob += (condition_term1 - pulp.lpSum(condition_term2[j]) == 0) # Adding the whole of the first condition
-    prob += (pulp.lpSum(x.values()) == 1) # Adding the whole of the second condition
+        condition1_term1 = condition2_term1 = pulp.lpSum(x[(j, a)] for a in mdp.actions(j)) # \sum_{a \in A(j)} x_{j, a}
+        condition2_term2 = pulp.lpSum(y[(j, a)] for a in mdp.actions(j)) # \sum_{a \in A(j)} y_{j, a}
+        prob += (condition1_term1 - pulp.lpSum(condition1_term2[j]) == 0) # Adding the whole of the first condition
+        prob += (condition2_term1 + condition2_term2 - pulp.lpSum(condition2_term3[j]) == alpha) # Adding the whole of the second condition
+
+    if target_uptime is not None:
+        # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime \ge U once
+        prob += (pulp.lpSum(((s[0] + s[1] <= N - k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
 
     prob.solve(gurobi_solver()) # Solve using Gurobi
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
 
+    # Puterman (9.3.7): q_{d(s)}(a) = x_{s, a} / \sum_{a'} x_{s, a'} on S_x = {s : \sum_a x_{s, a} > 0},
+    # and y_{s, a} / \sum_{a'} y_{s, a'} elsewhere, so the policy is defined at every state.
+    # Bare > 0 with no tolerance, as in policyFromFreqs: at a vertex the non-basic variables are
+    # exactly 0, and no threshold would work anyway since the frequencies span ~16 orders
     policy = {}
-    unassigned_states = set()
+    transient_states = set()
     for s in mdp.states():
-        action = lp_action(mdp, s, x, tol)
-        if action is None:
-            unassigned_states.add(s)
-        else:
-            policy[s] = {action: 1.0}
-    return policy, unassigned_states
+        values = {a: max(0, pulp.value(x[(s, a)]) or 0) for a in mdp.actions(s)} # Gurobi can return small negatives
+        if sum(values.values()) == 0:
+            transient_states.add(s) # States are transient if the \sum_a x_{s, a} = 0
+            values = {a: max(0, pulp.value(y[(s, a)]) or 0) for a in mdp.actions(s)}
+        total = sum(values.values())
+        policy[s] = {a: v / total for a, v in values.items() if v > 0}
+    return policy, transient_states
 
-def lp(mdp):
-    if mdp.gamma == 1: return solve_lp_gamma_1(mdp)
-    else: return solve_lp(mdp), set()
+
+def lp(mdp, target_uptime=None, N_k=None):
+    if mdp.gamma == 1: return solve_lp_gamma_1(mdp, target_uptime, N_k)
+    else: return solve_lp(mdp, target_uptime, N_k), set()

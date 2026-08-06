@@ -165,21 +165,43 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 ###   Monotonicity   ###
 ########################
 
-table_data = []
+# table_data = []
 
-for p in range(1,100000, 100):
-    actions = generate_mdp(N=10, alpha=1, tau=1000, p=p, r=1, gamma=0.99, delta=1/(10*1000), k=1)
-    mdp = MDP(actions=actions, gamma=0.99)
-    initial_policy = repair_all_policy(mdp)
-    PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
-    actual_uptime = uptime(mdp, PI_policy, 10, 1)
-    table_data.append([p, actual_uptime])
+# for p in range(1,100000, 100):
+#     actions = generate_mdp(N=10, alpha=1, tau=1000, p=p, r=1, gamma=0.99, delta=1/(10*1000), k=1)
+#     mdp = MDP(actions=actions, gamma=0.99)
+#     initial_policy = repair_all_policy(mdp)
+#     PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
+#     actual_uptime = uptime(mdp, PI_policy, 10, 1)
+#     table_data.append([p, actual_uptime])
 
-plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#426A5A")
-plt.title("Uptime vs P for N=10, tau=1000, gamma=0.99, k=1")
-plt.xlabel("P")
-plt.ylabel("9s of Uptime, -log(Downtime)")
-plt.savefig("plots/monotonicity_10_1000_0.99_1.svg", format="svg")
-plt.show()
+# plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#426A5A")
+# plt.title("Uptime vs P for N=10, tau=1000, gamma=0.99, k=1")
+# plt.xlabel("P")
+# plt.ylabel("9s of Uptime, -log(Downtime)")
+# plt.savefig("plots/monotonicity_10_1000_0.99_1.svg", format="svg")
+# plt.show()
 
-print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
+# print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
+
+
+
+########################
+###   Target Uptime  ###
+########################
+
+PARAMS = {
+    "N": 8, # Number of components
+    "alpha": 1, # rate of failure, do not change
+    "tau": 100, # Rate of repair
+    "p": 1000, # Penalty for system going down
+    "r": 1, # Repair cost, do not change
+    "gamma": 1, # Discount factor
+    "k": 1 # Number of components needed to be healthy
+}
+PARAMS["delta"] = 1 / (PARAMS["N"] * PARAMS["tau"])
+
+actions = generate_mdp(**PARAMS)
+mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
+LP_policy, LP_transient = lp(mdp, target_uptime=0.999999, N_k=PARAMS["N"] - PARAMS["k"])
+pprint(LP_policy)
