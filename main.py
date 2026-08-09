@@ -30,9 +30,10 @@ PARAMS = {
     "tau": 100, # Rate of repair
     "p": 1000, # Penalty for system going down
     "r": 1, # Repair cost, do not change
-    "gamma": 0.99, # Discount factor
+    "gamma": 1, # Discount factor
     "k": 1 # Number of components needed to be healthy
 }
+
 
 EPSILON = 1e-8  # Error for policy evaluation
 THETA = 1e-8  # Error for value iteration
@@ -67,7 +68,7 @@ print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
 print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
-# graph_policy(LP_policy, PARAMS["N"])
+graph_policy(LP_policy, PARAMS["N"], transient_states=LP_transient)
 # graph_policy(PI_policy, PARAMS["N"])
 # graph_policy(VI_policy, PARAMS["N"])
 

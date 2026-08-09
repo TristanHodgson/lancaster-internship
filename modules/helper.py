@@ -9,7 +9,7 @@ def all_close(V1, V2, tol=1e-8):
     return all(abs(V1[state] - V2[state]) < tol for state in V1)
 
 
-def graph_policy(policy, N, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
+def graph_policy(policy, N, transient_states=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
     policy_matrix = np.full((N + 1, N + 1), np.nan)
 
     for s1 in range(N + 1):
@@ -26,11 +26,15 @@ def graph_policy(policy, N, title="Policy Heatmap", SAVE=False, filename="policy
     for s1 in range(N + 1):
         for s2 in range(N + 1):
             value = policy_matrix[s1, s2]
+            if (s1,s2) in transient_states:
+                color = "red"
+            else:
+                color = "white"
             if not np.isnan(value):
                 ax.text(
                     s2, s1, f"{int(value)}",
                     ha="center", va="center",
-                    color="white", fontsize=8
+                    color=color, fontsize=8
                 )
 
     ax.set_xlabel("s2")
