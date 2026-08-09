@@ -24,39 +24,57 @@ class MDP:
         return {state for state in self.states() if self.is_terminal(state)}
 
 
-def reward_function(state, action, r,  p, N, k=1):
-    cost = r * (state[0] + action)
-    if state[0] + state[1] > N-k:
+def is_healthy(state, N, k):
+    # The system is up iff every type has at least k_j working components, i.e. s1_j + s2_j \le N_j - k_j
+    return all(N[j]- s1 - s2 >= k[j] for j, (s1, s2) in enumerate(state))
+
+
+def reward_function(state, action, r, p, N, k):
+    cost = sum(r[j] * (s1 + action[j]) for j, (s1, _) in enumerate(state))
+    if not is_healthy(state, N, k):
         cost += p
     return -cost
 
 
-def generate_mdp(N, alpha, tau, p, r, delta, gamma, k=1):
+def generate_mdp(N, alpha, tau, p, r, delta, k):
+    # N, alpha, tau, r and k are lists indexed by component type, p is the system-wide downtime penalty
     model = {}
-    for s1 in range(N + 1):
-        for s2 in range(N + 1 - s1):
-            state = (s1, s2)
-            actions = {}
-            for action in range(0, s2 + 1):
+
+    state_space = [()]
+    for n in N:            
+        state_space = [state + ((s1, s2),) # Concatenate two tuples
+                        for state in state_space
+                        for s1 in range(n + 1) for s2 in range(n + 1 - s1)]
+
+    for state in state_space:
+        actions = {}
+        action_space = [()]
+        for s1, s2 in state:
+            action_space = [action + (a,)
+                            for action in action_space for a in range(s2 + 1)]
+
+        for action in action_space:
+            # Every transition is taken from the post-action state, and they all earn the same reward
+            new_state = tuple((s1 + action[j], s2 - action[j])
+                                for j, (s1, s2) in enumerate(state))
+            reward = reward_function(state, action, r, p, N, k)
+            outcomes = []
+            for j, (s1, s2) in enumerate(new_state):
                 degradation = (
-                    (N - s1 - s2)*alpha * delta,
-                    (s1 + action, s2 - action + 1),
-                    # delta * reward_function(state, action, r, p, N, gamma)
-                    reward_function(state, action, r, p, N, k)
+                    (N[j] - s1 - s2) * alpha[j] * delta,
+                    new_state[:j] + ((s1, s2 + 1),) + new_state[j + 1:],
+                    reward
                 )
                 repair = (
-                    (s1 + action)*tau * delta,
-                    (s1 + action - 1, s2 - action),
-                    # delta * reward_function(state, action, r, p, N, gamma)
-                    reward_function(state, action, r, p, N, k)
+                    s1 * tau[j] * delta,
+                    new_state[:j] + ((s1 - 1, s2),) + new_state[j + 1:],
+                    reward
                 )
-                nothing = (
-                    1 - degradation[0] - repair[0],
-                    (s1 + action, s2 - action),
-                    # delta * reward_function(state, action, r,  p, N,gamma)
-                    reward_function(state, action, r, p, N, k)
-                )
-                outcomes = [degradation, repair, nothing]
-                actions[action] = [outcome for outcome in outcomes if outcome[0] > 0]
-            model[state] = actions
+                outcomes += [degradation, repair]
+            self_transition_prob = 1 - sum(probability for probability, _, _ in outcomes)
+            assert self_transition_prob >= 0, "Delta too large"
+            nothing = (self_transition_prob, new_state, reward)
+            outcomes.append(nothing)
+        actions[action] = [outcome for outcome in outcomes if outcome[0] > 0] # Need to remove prob=0 events
+        model[state] = actions
     return model

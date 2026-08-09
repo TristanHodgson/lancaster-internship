@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
     assert not mdp.is_terminal(
@@ -55,12 +56,12 @@ def action_from_state(state, policy):
 
 
 def get_max_action(policy):
-    max_action = -float("inf")
+    max_action = None
     max_action_state = None
     for state in policy.keys():
         assert len(policy[state]) == 1
         action = next(iter(policy[state]))
-        if action > max_action:
+        if max_action is None or sum(action) > sum(max_action):
             max_action = action
             max_action_state = state
     return max_action_state, max_action
@@ -78,6 +79,7 @@ def greedy_policy(mdp):
 
 def repair_all_policy(mdp):
     # Repairs every failed component immediately
+    # The action set is a product of ranges, so the lexicographic maximum is (s2_1, ..., s2_J)
     return {state: {max(mdp.actions(state)): 1.0} for state in mdp.states()}
 
 
@@ -155,12 +157,12 @@ def multichain_policy_gain(mdp, policy):
 
     # Impose Puterman's Condition 9.2.3: h = 0 at the first state of every recurrent class
     for recurrent_class in recurrent_classes(mdp, policy):
-        i = state_to_idx[recurrent_class[0]] # index of the first state in this recurrent class
-        A[i, :] = 0.0 # Set the row corresponding to this state to 0
-        A[i, n + i] = 1.0  
-        b[i] = 0.0 # this line and the one above give 1\times h(s) = 0, so imposes h(s)=0 as we wanted
+        i = state_to_idx[recurrent_class[0]]  # index of the first state in this recurrent class
+        A[i, :] = 0.0  # Set the row corresponding to this state to 0
+        A[i, n + i] = 1.0
+        b[i] = 0.0  # this line and the one above give 1\times h(s) = 0, so imposes h(s)=0 as we wanted
 
-    x = np.linalg.solve(A, b) # x is the block vector \begin{pmatrix} g \\ h \end{pmatrix}, so columns :n are g and columns n: are h
+    x = np.linalg.solve(A, b)  # x is the block vector \begin{pmatrix} g \\ h \end{pmatrix}, so columns :n are g and columns n: are h
     g = {state: x[state_to_idx[state]] for state in mdp.states()}
     h = {state: x[n + state_to_idx[state]] for state in mdp.states()}
     return g, h

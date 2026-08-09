@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from modules.mdp import MDP
+from modules.mdp import MDP, is_healthy
 from modules.utils import action_from_state, policy_matrices
 
 
@@ -9,32 +9,31 @@ def all_close(V1, V2, tol=1e-8):
     return all(abs(V1[state] - V2[state]) < tol for state in V1)
 
 
-def graph_policy(policy, N, transient_states=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
-    policy_matrix = np.full((N + 1, N + 1), np.nan)
+def graph_policy(policy, N, transient_states=None, component=0, title="Policy Heatmap", SAVE=False, filename="policy_heatmap"):
+    # Plots the action taken on one component type, with every other type left all-working
+    policy_matrix = np.full((N[component] + 1, N[component] + 1), np.nan)
+    working = tuple((0, 0) for _ in N)
 
-    for s1 in range(N + 1):
-        for s2 in range(N + 1 - s1):
-            state = (s1, s2)
+    for s1 in range(N[component] + 1):
+        for s2 in range(N[component] + 1 - s1):
+            state = working[:component] + ((s1, s2),) + working[component + 1:]
             if state in policy:
                 action = action_from_state(state, policy)
-                policy_matrix[s1, s2] = action
+                policy_matrix[s1, s2] = action[component]
 
     fig, ax = plt.subplots(figsize=(12, 12))
     im = ax.imshow(policy_matrix, cmap="viridis",
-                   origin="lower", vmin=0, vmax=N)
+                   origin="lower", vmin=0, vmax=N[component])
 
-    for s1 in range(N + 1):
-        for s2 in range(N + 1):
+    for s1 in range(N[component] + 1):
+        for s2 in range(N[component] + 1 - s1):
+            state = working[:component] + ((s1, s2),) + working[component + 1:]
             value = policy_matrix[s1, s2]
-            if (s1,s2) in transient_states:
-                color = "red"
-            else:
-                color = "white"
             if not np.isnan(value):
                 ax.text(
                     s2, s1, f"{int(value)}",
                     ha="center", va="center",
-                    color=color, fontsize=8
+                    color="red" if state in transient_states else "white", fontsize=8
                 )
 
     ax.set_xlabel("s2")
@@ -84,6 +83,6 @@ def evaluate_policy(mdp, policy, reward):
     return policy_gain_gamma_1(mrp, policy) if mdp.gamma == 1.0 else policy_gain(mrp, policy)
 
 
-def uptime(mdp, policy, N, k=1):
+def uptime(mdp, policy, N, k):
     # Gain of the indicator of the system being healthy
-    return evaluate_policy(mdp, policy, lambda state, action: state[0] + state[1] <= N - k)
+    return evaluate_policy(mdp, policy, lambda state, action: is_healthy(state, N, k))

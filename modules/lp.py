@@ -1,19 +1,21 @@
 import pulp
 import gurobipy as gp
 
+from modules.mdp import is_healthy
+
 
 def gurobi_solver(tol=1e-9):
     return pulp.GUROBI(msg=False, Method=1, Presolve=0, NumericFocus=3, FeasibilityTol=tol, OptimalityTol=tol)
 
 
-def solve_lp(mdp, target_uptime=None, N_k = None):
+def solve_lp(mdp, target_uptime=None, N=None, k=None):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
     #   \sum_{a \in A(j)} x_{j, a} - \gamma \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = \alpha_j \quad \forall j \in S 
     #   x_{s, a} \ge 0 \quad \forall s \in S, \forall a \in A(s)
-    # Note N_k is N - k, only needed if target_uptime is set
+    # Note N and k are the per-type lists, only needed if target_uptime is set
     prob = pulp.LpProblem("MDP_LP_Discounted", pulp.LpMaximize)
-    x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
+    x = {(s, a): pulp.LpVariable(f"x_{s}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     alpha = 1.0 / len(list(mdp.states())) # vector that has to be positive, stochastic; we simplify to a scalar
 
     objective = []
@@ -31,8 +33,8 @@ def solve_lp(mdp, target_uptime=None, N_k = None):
         prob += (condition_term1 - mdp.gamma * pulp.lpSum(condition_term2[j]) == alpha) # Adding the whole of the first condition
 
     if target_uptime is not None:
-        # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime \ge U
-        prob += (pulp.lpSum(((s[0] + s[1] <= N_k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
+        # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime >= U
+        prob += (pulp.lpSum((is_healthy(s, N, k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
 
     prob.solve(gurobi_solver()) # Solve using Gurobi
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
@@ -42,15 +44,15 @@ def solve_lp(mdp, target_uptime=None, N_k = None):
 
 
 # Multichain LP from 9.3 of Puterman
-def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=1):
+def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=None):
     # Maximises \sum_{s, a} r(s, a) x_{s, a}
     # Subject to:
     #   \forall j \in S \qquad \sum_{a \in A(j)} x_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = 0
     #   \forall j \in S \qquad \sum_{a \in A(j)} x_{j, a} + \sum_{a \in A(j)} y_{j, a} - \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) y_{s, a} = \alpha_j
     #   x_{s, a} \ge 0, y_{s, a} \ge 0
     prob = pulp.LpProblem("MDP_LP_Gamma_1", pulp.LpMaximize)
-    x = {(s, a): pulp.LpVariable(f"x_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
-    y = {(s, a): pulp.LpVariable(f"y_{s[0]}_{s[1]}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
+    x = {(s, a): pulp.LpVariable(f"x_{s}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
+    y = {(s, a): pulp.LpVariable(f"y_{s}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     alpha = 1.0 / len(list(mdp.states()))
 
     objective = []
@@ -73,7 +75,7 @@ def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=1):
 
     if target_uptime is not None:
         # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime \ge U once
-        prob += (pulp.lpSum(((s[0] + s[1] <= N - k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
+        prob += (pulp.lpSum((is_healthy(s, N, k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
 
     prob.solve(gurobi_solver()) # Solve using Gurobi
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
@@ -94,6 +96,6 @@ def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=1):
     return policy, transient_states
 
 
-def lp(mdp, target_uptime=None, N_k=None):
-    if mdp.gamma == 1: return solve_lp_gamma_1(mdp, target_uptime, N_k)
-    else: return solve_lp(mdp, target_uptime, N_k), set()
+def lp(mdp, target_uptime=None, N=None, k=None):
+    if mdp.gamma == 1: return solve_lp_gamma_1(mdp, target_uptime, N, k)
+    else: return solve_lp(mdp, target_uptime, N, k), set()
