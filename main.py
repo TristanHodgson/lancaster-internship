@@ -9,7 +9,7 @@ import numpy as np
 from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
-from modules.helper import graph_policy, policy_equal, uptime
+from modules.helper import graph_policy, policy_equal, uptime, graph_policy_grid
 from modules.utils import repair_all_policy, greedy_policy
 from modules.lp import lp
 
@@ -29,8 +29,8 @@ PARAMS = {
     "N": [4,4], # Number of components of each type
     "alpha": [1.5, 1], # rate of failure, do not change
     "tau": [100, 100], # Rate of repair
-    "p": 100000, # Penalty for system going down
-    "r": [2, 2], # Repair cost, do not change
+    "p": 100, # Penalty for system going down
+    "r": [2, 1], # Repair cost, do not change
     "k": [1, 1] # Number of components needed to be healthy
 }
 
@@ -71,6 +71,9 @@ print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}
 
 # graph_policy(LP_policy, PARAMS["N"], component=0)
 # graph_policy(PI_policy, PARAMS["N"], component=1)
+
+TITLE = f"N={PARAMS['N']}, alpha={PARAMS['alpha']}, tau={PARAMS['tau']}, r={PARAMS['r']}, k={PARAMS['k']}, p={PARAMS['p']}, gamma={GAMMA}"
+graph_policy_grid(LP_policy, PARAMS["N"], LP_transient, title=TITLE, filename=TITLE, SAVE=True)
 
 
 ########################
@@ -157,3 +160,28 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 # |  0.999990 |        3.7714 |      224.3156 |        2.3885 |
 # |  0.999999 |        3.7537 |      224.9884 |        2.3967 |
 # |  1.000000 |        3.7694 |      220.9227 |        2.4012 |
+
+
+
+########################
+###   Monotonicity   ###
+########################
+
+# table_data = []
+
+# for p in range(1,100000, 100):
+#     actions = generate_mdp(N=10, alpha=1, tau=1000, p=p, r=1, gamma=0.99, delta=1/(10*1000), k=1)
+#     mdp = MDP(actions=actions, gamma=0.99)
+#     initial_policy = repair_all_policy(mdp)
+#     PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
+#     actual_uptime = uptime(mdp, PI_policy, 10, 1)
+#     table_data.append([p, actual_uptime])
+
+# plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#426A5A")
+# plt.title("Uptime vs P for N=10, tau=1000, gamma=0.99, k=1")
+# plt.xlabel("P")
+# plt.ylabel("9s of Uptime, -log(Downtime)")
+# plt.savefig("plots/monotonicity_10_1000_0.99_1.svg", format="svg")
+# plt.show()
+
+# print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
