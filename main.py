@@ -60,11 +60,6 @@ LP_policy, LP_transient = lp(mdp)
 
 graph_policy(LP_policy, PARAMS["N"], LP_transient)
 
-# Fill in missing states in LP_policy with the maximum possible action
-for state in mdp.states():
-    if state not in LP_policy:
-        LP_policy[state] = {max(mdp.actions(state)): 1}
-
 print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
 print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
