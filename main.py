@@ -2,6 +2,7 @@ from time import perf_counter
 from tqdm import tqdm
 from pprint import pprint
 import tabulate
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -25,15 +26,15 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": [4, 4], # Number of components of each type
-    "alpha": [1, 1], # rate of failure, do not change
-    "tau": [100, 50], # Rate of repair
-    "p": 1000, # Penalty for system going down
-    "r": [1, 2], # Repair cost, do not change
+    "N": [4,4], # Number of components of each type
+    "alpha": [1.5, 1], # rate of failure, do not change
+    "tau": [100, 100], # Rate of repair
+    "p": 100000, # Penalty for system going down
+    "r": [2, 2], # Repair cost, do not change
     "k": [1, 1] # Number of components needed to be healthy
 }
 
-GAMMA = 0.99 # Discount factor
+GAMMA = 1 # Discount factor
 
 EPSILON = 1e-8  # Error for policy evaluation
 THETA = 1e-8  # Error for value iteration
@@ -76,8 +77,83 @@ print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}
 ###   Target Uptime  ###
 ########################
 
-# PARAMS["gamma"] = 1
+
 # actions = generate_mdp(**PARAMS)
-# mdp = MDP(actions=actions, gamma=PARAMS["gamma"])
-# LP_policy, LP_transient = lp(mdp, target_uptime=0.999999, N=PARAMS["N"], k=PARAMS["k"])
+# mdp = MDP(actions=actions, gamma=GAMMA)
+# target_uptime = 0.999
+# LP_policy, LP_transient = lp(mdp, target_uptime=target_uptime, N=PARAMS["N"], k=PARAMS["k"])
 # pprint(LP_policy)
+# print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
+
+
+
+
+
+###########################
+### Binary Search for P ###
+###########################
+
+def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
+    if b-a < 0.01:
+        return int((a + b) / 2)
+    # Finding uptime for p=(a+b)/2
+    actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
+    mdp = MDP(actions=actions, gamma=gamma)
+    initial_policy = repair_all_policy(mdp)
+    PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
+    actual_uptime = uptime(mdp, PI_policy, N, k)
+    # Next iteration
+    # print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}")
+    if actual_uptime < target_uptime:
+        return uptime_binary_search(target_uptime, (a+b)/2, b, N, tau, gamma, k, alpha, r)
+    else:
+        return uptime_binary_search(target_uptime, a, (a+b)/2, N, tau, gamma, k, alpha, r)
+
+
+# uptime_p = uptime_binary_search(
+#     target_uptime=0.999999999,
+#     a=0,
+#     b=100000,
+#     N=10,
+#     tau=500,
+#     gamma=1,
+#     k=1
+# )
+# print(f"Binary search for P to achieve uptime of 0.999999999: {uptime_p}")
+
+
+
+
+########################
+###    Speed Test    ###
+########################
+
+# Commented out to speed up run time. Results below.
+
+
+# table_data = []
+# for gamma in [1-10**(-i) for i in range(2,7)] + [1]:
+#     row = []
+#     for i in ["PI", "VI", "LP"]:
+#         start = perf_counter()
+#         for _ in range(500):
+#             if i == "PI":
+#                 PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+#             elif i == "VI":
+#                 VI_policy, VI_V = value_iteration(mdp, THETA)
+#             elif i == "LP":
+#                 LP_policy, LP_transient = lp(mdp)
+#         end = perf_counter()
+#         row.append(end - start)
+#     table_data.append([gamma] + row)
+# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
+
+
+# |     Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
+# |-----------|---------------|---------------|---------------|
+# |  0.990000 |        3.6834 |      219.6479 |        2.4225 |
+# |  0.999000 |        3.7741 |      221.0431 |        2.4227 |
+# |  0.999900 |        3.7732 |      223.5712 |        2.4269 |
+# |  0.999990 |        3.7714 |      224.3156 |        2.3885 |
+# |  0.999999 |        3.7537 |      224.9884 |        2.3967 |
+# |  1.000000 |        3.7694 |      220.9227 |        2.4012 |
