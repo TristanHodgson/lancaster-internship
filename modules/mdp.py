@@ -75,6 +75,6 @@ def generate_mdp(N, alpha, tau, p, r, delta, k):
             assert self_transition_prob >= 0, "Delta too large"
             nothing = (self_transition_prob, new_state, reward)
             outcomes.append(nothing)
-        actions[action] = [outcome for outcome in outcomes if outcome[0] > 0] # Need to remove prob=0 events
+            actions[action] = [outcome for outcome in outcomes if outcome[0] > 0] # Need to remove prob=0 events
         model[state] = actions
     return model

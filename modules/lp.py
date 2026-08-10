@@ -81,18 +81,17 @@ def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=None):
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
 
     # Puterman (9.3.7): q_{d(s)}(a) = x_{s, a} / \sum_{a'} x_{s, a'} on S_x = {s : \sum_a x_{s, a} > 0},
-    # and y_{s, a} / \sum_{a'} y_{s, a'} elsewhere, so the policy is defined at every state.
-    # Bare > 0 with no tolerance, as in policyFromFreqs: at a vertex the non-basic variables are
-    # exactly 0, and no threshold would work anyway since the frequencies span ~16 orders
+    # and y_{s, a} / \sum_{a'} y_{s, a'} elsewhere; the policy is defined at every state.
     policy = {}
     transient_states = set()
     for s in mdp.states():
-        values = {a: max(0, pulp.value(x[(s, a)]) or 0) for a in mdp.actions(s)} # Gurobi can return small negatives
-        if sum(values.values()) == 0:
+        values = {a: pulp.value(x[(s, a)]) for a in mdp.actions(s) if pulp.value(x[(s, a)]) > 0}
+        if not values:
             transient_states.add(s) # States are transient if the \sum_a x_{s, a} = 0
-            values = {a: max(0, pulp.value(y[(s, a)]) or 0) for a in mdp.actions(s)}
+            values = {a: pulp.value(y[(s, a)]) for a in mdp.actions(s) if pulp.value(y[(s, a)]) > 0}
         total = sum(values.values())
-        policy[s] = {a: v / total for a, v in values.items() if v > 0}
+        policy[s] = {a: v / total for a, v in values.items()}
+        # assert target_uptime is not None or len(policy[s]) == 1, f"Randomised policy at {s}: {policy[s]}"
     return policy, transient_states
 
 

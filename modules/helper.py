@@ -1,3 +1,5 @@
+from email import policy
+
 import matplotlib.pyplot as plt
 import numpy as np
 from modules.mdp import MDP, is_healthy
@@ -8,19 +10,31 @@ def all_close(V1, V2, tol=1e-8):
     # Check if two value functions are close enough
     return all(abs(V1[state] - V2[state]) < tol for state in V1)
 
+def randomised_note(policy, states):
+    # Lists the states where q_{d(s)} puts mass on more than one action, heaviest first
+    randomised = {state: policy[state] for state in states if len(policy[state]) > 1}
+    if not randomised:
+        return ""
+    return "\n".join(["Randomised states:"] + [
+        f"{state}: " + ", ".join(f"{action} {q:.3g}" for action, q in sorted(distribution.items(), key=lambda item: -item[1]))
+        for state, distribution in randomised.items()])
+
+
 def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap", ax=None):
     # Plots the action taken on the component type marked True in fixed, with every other type held at the state given in fixed
+    # The policy may be randomised, in which case the value plotted is the expected action \sum_a q_{d(s)}(a) a_component
     if fixed is None:
         fixed = [True] + [(0, 0)] * (len(N) - 1)
     component = fixed.index(True)
     policy_matrix = np.full((N[component] + 1, N[component] + 1), np.nan)
+    plotted = []
 
     for s1 in range(N[component] + 1):
         for s2 in range(N[component] + 1 - s1):
             state = tuple(fixed[:component]) + ((s1, s2),) + tuple(fixed[component + 1:])
             if state in policy:
-                action = action_from_state(state, policy)
-                policy_matrix[s1, s2] = action[component]
+                plotted.append(state)
+                policy_matrix[s1, s2] = sum(q * action[component] for action, q in policy[state].items())
 
     own_figure = ax is None
     if own_figure:
@@ -33,15 +47,18 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
             value = policy_matrix[s1, s2]
             if not np.isnan(value):
                 ax.text(
-                    s2, s1, f"{int(value)}",
+                    s2, s1, f"{value:g}",
                     ha="center", va="center",
-                    color="red" if state in transient_states else "white", fontsize=8
+                    color="black" if len(policy[state]) > 1 else "red" if state in (transient_states or set()) else "white", fontsize=8
                 )
 
     ax.set_xlabel("s2")
     ax.set_ylabel("s1")
     ax.set_title(title)
     if own_figure:
+        note = randomised_note(policy, plotted)
+        if note:
+            ax.set_xlabel("s2\n\n" + note)
         fig.colorbar(im, ax=ax)
         if SAVE:
             fig.savefig(f"img/{filename}.svg", format="svg", bbox_inches="tight")
@@ -74,7 +91,8 @@ def graph_policy_grid(policy, N, transient_states=None, title="Policy Heatmap", 
     fig.colorbar(im, ax=list(fig.axes), shrink=0.9, aspect=40, label="components of type 2 sent for repair")
 
     fig.suptitle(title)
-    fig.supxlabel(r"grid column: $s_2^1$   $\cdot$   within panel: $s_2^2$")
+    note = randomised_note(policy, policy.keys())
+    fig.supxlabel(r"grid column: $s_2^1$   $\cdot$   within panel: $s_2^2$" + ("\n\n" + note if note else ""), fontsize=8)
     fig.supylabel(r"grid row: $s_1^1$   $\cdot$   within panel: $s_1^2$")
     if SAVE:
         fig.savefig(f"img/{filename}.svg", format="svg", bbox_inches="tight")
@@ -105,17 +123,22 @@ def policy_gain_gamma_1(mdp, policy):
 
 def policy_mrp(mdp, policy, reward):
     # The Markov reward process induced by policy with the reward function replaced
-    actions = {state: action_from_state(state, policy)
-               for state in mdp.states()}
-    return MDP({state: {actions[state]: [(prob, next_state, reward(state, actions[state]))
-                                         for prob, next_state, _ in mdp.outcomes(state, actions[state])]}
-                for state in mdp.states()}, mdp.gamma)
+    transitions = {}
+    for state in mdp.states():
+        outcomes = {}
+        for action, q in policy[state].items():
+            for prob, next_state, _ in mdp.outcomes(state, action):
+                outcomes[next_state] = outcomes.get(next_state, 0.0) + q * prob
+        mixed_reward = sum(q * reward(state, action) for action, q in policy[state].items())
+        transitions[state] = {None: [(prob, next_state, mixed_reward) for next_state, prob in outcomes.items()]}
+    return MDP(transitions, mdp.gamma)
 
 
 def evaluate_policy(mdp, policy, reward):
     # Gives the gain of the Markov reward process induced by the policy under the reward function
     mrp = policy_mrp(mdp, policy, reward)
-    return policy_gain_gamma_1(mrp, policy) if mdp.gamma == 1.0 else policy_gain(mrp, policy)
+    mrp_policy = {state: {None: 1.0} for state in mrp.states()}
+    return policy_gain_gamma_1(mrp, mrp_policy) if mdp.gamma == 1.0 else policy_gain(mrp, mrp_policy)
 
 
 def uptime(mdp, policy, N, k):
