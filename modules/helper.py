@@ -46,10 +46,12 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
             state = tuple(fixed[:component]) + ((s1, s2),) + tuple(fixed[component + 1:])
             value = policy_matrix[s1, s2]
             if not np.isnan(value):
+                if state in (transient_states or set()):
+                    ax.add_patch(plt.Rectangle((s2 - 0.5, s1 - 0.5), 1, 1, color="black")) # Transient states are blacked out
                 ax.text(
                     s2, s1, f"{value:g}",
                     ha="center", va="center",
-                    color="black" if len(policy[state]) > 1 else "red" if state in (transient_states or set()) else "white", fontsize=8
+                    color="black" if len(policy[state]) > 1 else "white", fontsize=8
                 )
 
     ax.set_xlabel("s2")

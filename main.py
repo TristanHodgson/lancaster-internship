@@ -26,12 +26,12 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": [4,4], # Number of components of each type
-    "alpha": [1.5, 1], # rate of failure, do not change
-    "tau": [100, 100], # Rate of repair
+    "N": [4, 4], # Number of components of each type
+    "alpha": [1.5,1 ], # rate of failure, do not change
+    "tau": [100,100], # Rate of repair
     "p": 100, # Penalty for system going down
     "r": [2, 1], # Repair cost, do not change
-    "k": [1, 1] # Number of components needed to be healthy
+    "k": [1,1] # Number of components needed to be healthy
 }
 
 GAMMA = 1 # Discount factor
@@ -52,15 +52,15 @@ PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 
 actions = generate_mdp(**PARAMS)
 mdp = MDP(actions=actions, gamma=GAMMA)
-initial_policy = repair_all_policy(mdp)
 
-PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+# initial_policy = repair_all_policy(mdp)
+# PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
 graph_policy(LP_policy, PARAMS["N"], LP_transient)
 
-print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
+# print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
 print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
@@ -180,3 +180,54 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 # plt.show()
 
 # print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
+
+
+
+
+########################
+###    Experiment    ###
+########################
+
+PARAMS = {
+    "N": [6], # Number of components of each type
+    "alpha": [1], # rate of failure, do not change
+    "tau": [100], # Rate of repair
+    "r": [1], # Repair cost, do not change
+    "k": [1] # Number of components needed to be healthy
+}
+PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+GAMMA = 1 # Discount factor
+
+# table_data = []
+# for p in tqdm([i for i in range(0,100000,100)]+[i for i in range(100000,10000000, 1000)]):
+#     PARAMS["p"] = p
+    
+#     actions = generate_mdp(**PARAMS)
+#     mdp = MDP(actions=actions, gamma=GAMMA)
+#     lp_policy, lp_transient = lp(mdp)
+#     uptime_value = uptime(mdp, lp_policy, PARAMS["N"], PARAMS["k"])
+#     table_data.append([p, uptime_value, lp_transient])
+#     graph_policy(lp_policy, PARAMS["N"], lp_transient, title=f"p={p}", filename=f"experiment1/experiment_p_{p:010d}", SAVE=True)
+
+
+PARAMS = {
+    "N": [3,3], # Number of components of each type
+    "alpha": [1,1], # rate of failure, do not change
+    "tau": [100,100], # Rate of repair
+    "r": [2,1], # Repair cost, do not change
+    "k": [1,1] # Number of components needed to be healthy
+}
+PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+GAMMA = 1 # Discount factor
+
+table_data = []
+for p in tqdm([i for i in range(0,100000,100)]+[i for i in range(100000,10000000, 10000)]):
+    PARAMS["p"] = p
+    
+    actions = generate_mdp(**PARAMS)
+    mdp = MDP(actions=actions, gamma=GAMMA)
+    lp_policy, lp_transient = lp(mdp)
+    uptime_value = uptime(mdp, lp_policy, PARAMS["N"], PARAMS["k"])
+    table_data.append([p, uptime_value, lp_transient])
+    graph_policy_grid(lp_policy, PARAMS["N"], lp_transient, title=f"p={p}", filename=f"experiment2/experiment_p_{p:010d}", SAVE=True)
+
