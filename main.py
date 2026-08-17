@@ -10,7 +10,7 @@ from modules.mdp import *
 from modules.policy_iteration import policy_iteration
 from modules.value_iteration import value_iteration
 from modules.helper import graph_policy, policy_equal, uptime, graph_policy_grid
-from modules.utils import repair_all_policy, greedy_policy
+from modules.utils import repair_all_policy, greedy_policy, policy_sum_gamma_1, action_from_state
 from modules.lp import lp
 
 ########################
@@ -188,6 +188,8 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 ###    Experiment    ###
 ########################
 
+
+"""
 PARAMS = {
     "N": [6], # Number of components of each type
     "alpha": [1], # rate of failure, do not change
@@ -230,4 +232,56 @@ for p in tqdm([i for i in range(0,100000,100)]+[i for i in range(100000,10000000
     uptime_value = uptime(mdp, lp_policy, PARAMS["N"], PARAMS["k"])
     table_data.append([p, uptime_value, lp_transient])
     graph_policy_grid(lp_policy, PARAMS["N"], lp_transient, title=f"p={p}", filename=f"experiment2/experiment_p_{p:010d}", SAVE=True)
+"""
 
+
+
+########################
+###   Experiment 2   ###
+########################
+
+# Note currently only works for gamma=1
+
+
+def test_monotonicity(N, tau, k, p):
+    violations = 0
+    violations_desc = []
+    params = {"N": [N], "alpha": [1], "tau": [tau], "p": p, "r": [1], "k": [k]}
+    params["delta"] = 1 / sum(n * t for n, t in zip(params["N"], params["tau"]))
+    mdp = MDP(actions=generate_mdp(**params), gamma=1)
+    print(f"Testing monotonicity for N={N}, tau={tau}, k={k}, p={p}")
+    lp_policy, _ = lp(mdp)
+    policy = {state: {max(lp_policy[state], key=lp_policy[state].get) if lp_policy.get(state) else (0,): 1.0} for state in mdp.states()}
+    policy, h = policy_iteration(mdp, policy, EPSILON)
+
+    f = {state: policy_sum_gamma_1(mdp, state, (0,), h) for state in mdp.states()} # evaluating f assumes 0 action
+    tol = 1e-8 * max(abs(value) for value in f.values())
+
+    for state in mdp.states():
+        (s1, s2), = state
+        a, = action_from_state(state, policy)
+        F = [f[((s1 + x, s2 - x),)] for x in range(a, s2 + 1)]
+        for i in range(len(F) - 1):
+            if F[i + 1] > F[i] + tol:
+                violations += 1
+                violations_desc.append((tau, N, k, p, state, a, a + i, F[i], F[i + 1]))
+    return violations, violations_desc
+
+
+v = 0
+desc = []
+tested = 0
+for tau in [1,10, 100, 1000, 500, 200,700, 850]:
+    for N in range(1, 8):
+        for k in range(1, N):
+            for p in [0, 10, 100, 1000, 500, 200, 700, 10000, 100000, 1000000]:
+                tested += 1
+                mono = test_monotonicity(N, tau, k, p)
+                v += mono[0]
+                desc.extend(mono[1])
+
+print(f"Total violations: {v} out of {tested} tests")
+
+for violation in desc:
+    tau, N, k, p, state, a1, a2, f1, f2 = violation
+    print(f"Violation for tau={tau}, N={N}, k={k}, p={p}, state={state}: f({a1})={f1} < f({a2})={f2}")
