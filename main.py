@@ -12,6 +12,7 @@ from modules.value_iteration import value_iteration
 from modules.helper import graph_policy, policy_equal, uptime, graph_policy_grid
 from modules.utils import repair_all_policy, greedy_policy, policy_sum_gamma_1, action_from_state
 from modules.lp import lp
+from modules.conjectures import optimal_policy, test_monotonicity, test_action_monotonicity, test_recurrent_shape
 
 ########################
 ###  Gurobi License  ###
@@ -26,15 +27,15 @@ os.environ["GRB_LICENSE_FILE"] = "secret/gurobi.lic"
 ########################
 
 PARAMS = {
-    "N": [4, 4], # Number of components of each type
-    "alpha": [1.5,1 ], # rate of failure, do not change
-    "tau": [100,100], # Rate of repair
-    "p": 100, # Penalty for system going down
-    "r": [2, 1], # Repair cost, do not change
-    "k": [1,1] # Number of components needed to be healthy
+    "N": [4, 4],  # Number of components of each type
+    "alpha": [1.5, 1],  # rate of failure, do not change
+    "tau": [100, 100],  # Rate of repair
+    "p": 100,  # Penalty for system going down
+    "r": [2, 1],  # Repair cost, do not change
+    "k": [1, 1]  # Number of components needed to be healthy
 }
 
-GAMMA = 1 # Discount factor
+GAMMA = 1  # Discount factor
 
 EPSILON = 1e-8  # Error for policy evaluation
 THETA = 1e-8  # Error for value iteration
@@ -58,17 +59,19 @@ mdp = MDP(actions=actions, gamma=GAMMA)
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
-graph_policy(LP_policy, PARAMS["N"], LP_transient)
+# graph_policy(LP_policy, PARAMS["N"], LP_transient)
 
 # print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
-print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
+print(
+    f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
 # graph_policy(LP_policy, PARAMS["N"], component=0)
 # graph_policy(PI_policy, PARAMS["N"], component=1)
 
 TITLE = f"N={PARAMS['N']}, alpha={PARAMS['alpha']}, tau={PARAMS['tau']}, r={PARAMS['r']}, k={PARAMS['k']}, p={PARAMS['p']}, gamma={GAMMA}"
-graph_policy_grid(LP_policy, PARAMS["N"], LP_transient, title=TITLE, filename=TITLE, SAVE=True)
+graph_policy_grid(
+    LP_policy, PARAMS["N"], LP_transient, title=TITLE, filename=TITLE, SAVE=True)
 
 
 ########################
@@ -84,9 +87,6 @@ graph_policy_grid(LP_policy, PARAMS["N"], LP_transient, title=TITLE, filename=TI
 # print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
 
-
-
-
 ###########################
 ### Binary Search for P ###
 ###########################
@@ -95,7 +95,8 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
     if b-a < 0.01:
         return int((a + b) / 2)
     # Finding uptime for p=(a+b)/2
-    actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
+    actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(
+        a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
     mdp = MDP(actions=actions, gamma=gamma)
     initial_policy = repair_all_policy(mdp)
     PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
@@ -118,8 +119,6 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 #     k=1
 # )
 # print(f"Binary search for P to achieve uptime of 0.999999999: {uptime_p}")
-
-
 
 
 ########################
@@ -157,7 +156,6 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 # |  1.000000 |        3.7694 |      220.9227 |        2.4012 |
 
 
-
 ########################
 ###   Monotonicity   ###
 ########################
@@ -182,13 +180,9 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 # print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
 
 
-
-
 ########################
 ###    Experiment    ###
 ########################
-
-
 """
 PARAMS = {
     "N": [6], # Number of components of each type
@@ -235,53 +229,51 @@ for p in tqdm([i for i in range(0,100000,100)]+[i for i in range(100000,10000000
 """
 
 
-
 ########################
 ###   Experiment 2   ###
 ########################
 
-# Note currently only works for gamma=1
 
-
-def test_monotonicity(N, tau, k, p):
-    violations = 0
-    violations_desc = []
-    params = {"N": [N], "alpha": [1], "tau": [tau], "p": p, "r": [1], "k": [k]}
-    params["delta"] = 1 / sum(n * t for n, t in zip(params["N"], params["tau"]))
-    mdp = MDP(actions=generate_mdp(**params), gamma=1)
-    print(f"Testing monotonicity for N={N}, tau={tau}, k={k}, p={p}")
-    lp_policy, _ = lp(mdp)
-    policy = {state: {max(lp_policy[state], key=lp_policy[state].get) if lp_policy.get(state) else (0,): 1.0} for state in mdp.states()}
-    policy, h = policy_iteration(mdp, policy, EPSILON)
-
-    f = {state: policy_sum_gamma_1(mdp, state, (0,), h) for state in mdp.states()} # evaluating f assumes 0 action
-    tol = 1e-8 * max(abs(value) for value in f.values())
-
-    for state in mdp.states():
-        (s1, s2), = state
-        a, = action_from_state(state, policy)
-        F = [f[((s1 + x, s2 - x),)] for x in range(a, s2 + 1)]
-        for i in range(len(F) - 1):
-            if F[i + 1] > F[i] + tol:
-                violations += 1
-                violations_desc.append((tau, N, k, p, state, a, a + i, F[i], F[i + 1]))
-    return violations, violations_desc
-
-
-v = 0
-desc = []
+conjecture1 = []
+conjecture2 = []
+conjecture3 = []
 tested = 0
-for tau in [1,10, 100, 1000, 500, 200,700, 850]:
-    for N in range(1, 8):
-        for k in range(1, N):
-            for p in [0, 10, 100, 1000, 500, 200, 700, 10000, 100000, 1000000]:
-                tested += 1
-                mono = test_monotonicity(N, tau, k, p)
-                v += mono[0]
-                desc.extend(mono[1])
+compared = 0
 
-print(f"Total violations: {v} out of {tested} tests")
+for gamma in [0.8,0.9, 0.99, 0.999, 0.9999, 1]:
+    for tau in [1, 10, 100, 200, 500, 700, 850, 1000]:
+        for N in range(1, 8):
+            for k in range(1, N):
+                previous_p, previous_policy = None, None
+                for p in sorted([0, 10, 100, 200, 500, 700, 1000, 10000, 100000, 1000000]):
+                    print(f"Testing gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
+                    mdp, policy, h = optimal_policy(N, tau, k, p, gamma)
+                    tested += 1
+                    conjecture1 += [(gamma, tau, N, k, p) + violation for violation in test_monotonicity(mdp, policy, h)]
+                    conjecture3 += [(gamma, tau, N, k, p) + violation for violation in test_recurrent_shape(mdp, policy)]
+                    if previous_policy is not None:
+                        compared += 1
+                        conjecture2 += [(gamma, tau, N, k, previous_p, p) + violation for violation in test_action_monotonicity(mdp, policy, previous_policy)]
+                    previous_p, previous_policy = p, policy
 
-for violation in desc:
-    tau, N, k, p, state, a1, a2, f1, f2 = violation
-    print(f"Violation for tau={tau}, N={N}, k={k}, p={p}, state={state}: f({a1})={f1} < f({a2})={f2}")
+print("\n"*5)
+print(f"Tested {tested} instances")
+### Conjecture 1: x > a \implies \pi(s_1 + x, s_2 - x) = 0 ###
+print("\n"*5)
+print(f"Conjecture 1: {len(conjecture1)} violations, {sum(1 for violation in conjecture1 if violation[-1])} of them with both states in the same recurrent class")
+for gamma, tau, N, k, p, state, x1, x2, f1, f2, same_class in conjecture1:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}, state={state}, same class={same_class}: f({x1})={f1} < f({x2})={f2}")
+
+
+### Conjecture 2: increasing p never decreases the optimal action ###
+print("\n"*5)
+print(f"Conjecture 2: {len(conjecture2)} violations over {compared} comparisons, {sum(1 for violation in conjecture2 if violation[-1])} of them at a recurrent state")
+for gamma, tau, N, k, p1, p2, state, a1, a2, recurrent in conjecture2:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, state={state}, recurrent={recurrent}: pi_{p1}({state})={a1} > pi_{p2}({state})={a2}")
+
+
+### Conjecture 3: each column of the recurrent class is downward closed in s_1 ###
+print("\n"*5)
+print(f"Conjecture 3: {len(conjecture3)} violations")
+for gamma, tau, N, k, p, state, missing in conjecture3:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} is recurrent but {missing} is not in its class")

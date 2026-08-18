@@ -38,7 +38,7 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
 
     own_figure = ax is None
     if own_figure:
-        fig, ax = plt.subplots(figsize=(12, 12))
+        fig, ax = plt.subplots(figsize=(6, 3))
     im = ax.imshow(policy_matrix, cmap="viridis", origin="lower", vmin=0, vmax=N[component])
 
     for s1 in range(N[component] + 1):
@@ -54,8 +54,8 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
                     color="black" if len(policy[state]) > 1 else "white", fontsize=8
                 )
 
-    ax.set_xlabel("s2")
-    ax.set_ylabel("s1")
+    ax.set_xlabel(r"Not being repaired $(s_2)$")
+    ax.set_ylabel(r"Under repair $(s_1)$")
     ax.set_title(title)
     if own_figure:
         note = randomised_note(policy, plotted)
@@ -63,7 +63,7 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
             ax.set_xlabel("s2\n\n" + note)
         fig.colorbar(im, ax=ax)
         if SAVE:
-            fig.savefig(f"img/{filename}.svg", format="svg", bbox_inches="tight")
+            fig.savefig(f"img/{filename}.svg", format="svg", bbox_inches="tight", transparent=True)
         else:
             plt.show()
         plt.close(fig)
