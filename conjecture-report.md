@@ -1,11 +1,9 @@
-Tested 11760 instances
+# Conjecture report
 
+**Tested 11760 instances** Took ~1 hour to run
 
+## Conjecture 1: 37 violations, 0 of them with both states in the same recurrent class
 
-
-
-
-Conjecture 1: 37 violations, 0 of them with both states in the same recurrent class
 Violation for gamma=0.7, tau=1, N=6, k=5, p=100, state=((0, 4),), same class=False: f(3)=-334.6052133308893 < f(4)=-334.60195372856674
 Violation for gamma=0.7, tau=1, N=6, k=5, p=100, state=((1, 3),), same class=False: f(2)=-334.6052133308893 < f(3)=-334.60195372856674
 Violation for gamma=0.7, tau=1, N=6, k=5, p=100, state=((2, 2),), same class=False: f(1)=-334.6052133308893 < f(2)=-334.60195372856674
@@ -44,16 +42,6 @@ Violation for gamma=0.9, tau=1, N=7, k=6, p=100, state=((0, 5),), same class=Fal
 Violation for gamma=0.9, tau=1, N=7, k=6, p=100, state=((1, 4),), same class=False: f(2)=-1004.2669420901709 < f(3)=-1004.169264852923
 Violation for gamma=0.9, tau=1, N=7, k=6, p=100, state=((1, 4),), same class=False: f(3)=-1004.169264852923 < f(4)=-1003.9678984598113
 
+## Conjecture 2: 0 violations over 10584 comparisons, 0 of them at a recurrent state
 
-
-
-
-
-Conjecture 2: 0 violations over 10584 comparisons, 0 of them at a recurrent state
-
-
-
-
-
-
-Conjecture 3: 0 violations
+## Conjecture 3: 0 violations
