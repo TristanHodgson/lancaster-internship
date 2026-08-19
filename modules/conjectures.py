@@ -9,19 +9,16 @@ EPSILON = 1e-8  # Error for policy evaluation
 
 def optimal_policy(N, tau, k, p, gamma=1, alpha=1, r=1):
     # Solves the one type model, returning the MDP, a deterministic optimal policy and h, which is the bias when gamma=1 and the discounted value function otherwise
-    params = {"N": [N], "alpha": [alpha], "tau": [tau], "p": p, "r": [r], "k": [k]}
+    params = {"N": [N], "alpha": [alpha], "tau": [tau], "p": p, "r": [r], "k": [k], "cancellation": False}
     params["delta"] = 1 / sum(n * t for n, t in zip(params["N"], params["tau"]))
     mdp = MDP(actions=generate_mdp(**params), gamma=gamma)
 
-    policy = None
     epsilon = EPSILON
-    if gamma == 1:
-        # The LP only pins down the policy on recurrent states, so we warm start policy iteration with it to get an action everywhere
-        lp_policy, _ = lp(mdp)
-        policy = {state: {max(lp_policy[state], key=lp_policy[state].get) if lp_policy.get(state) else (0,): 1.0} for state in mdp.states()}
-    else:
+    if gamma != 1:
         epsilon = max((1 - gamma) / gamma * EPSILON, 1e-14)
-
+    lp_policy, _ = lp(mdp)
+    
+    policy = {state: {max(lp_policy[state], key=lp_policy[state].get) if lp_policy.get(state) else (0,): 1.0} for state in mdp.states()}
     policy, h = policy_iteration(mdp, policy, epsilon)
     return mdp, policy, h
 
