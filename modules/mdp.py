@@ -36,7 +36,7 @@ def reward_function(state, action, r, p, N, k):
     return -cost
 
 
-def generate_mdp(N, alpha, tau, p, r, delta, k):
+def generate_mdp(N, alpha, tau, p, r, delta, k, cancellation=False):
     # N, alpha, tau, r and k are lists indexed by component type, p is the system-wide downtime penalty
     model = {}
 
@@ -51,7 +51,7 @@ def generate_mdp(N, alpha, tau, p, r, delta, k):
         action_space = [()]
         for s1, s2 in state:
             action_space = [action + (a,)
-                            for action in action_space for a in range(s2 + 1)]
+                            for action in action_space for a in range(-s1 if cancellation else 0, s2 + 1)]
 
         for action in action_space:
             # Every transition is taken from the post-action state, and they all earn the same reward

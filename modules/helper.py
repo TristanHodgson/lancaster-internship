@@ -20,7 +20,7 @@ def randomised_note(policy, states):
         for state, distribution in randomised.items()])
 
 
-def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap", ax=None):
+def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap", ax=None, cancellation=False):
     # Plots the action taken on the component type marked True in fixed, with every other type held at the state given in fixed
     # The policy may be randomised, in which case the value plotted is the expected action \sum_a q_{d(s)}(a) a_component
     if fixed is None:
@@ -39,8 +39,7 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
     own_figure = ax is None
     if own_figure:
         fig, ax = plt.subplots(figsize=(6, 3))
-    im = ax.imshow(policy_matrix, cmap="viridis", origin="lower", vmin=0, vmax=N[component])
-
+    im = ax.imshow(policy_matrix, cmap="coolwarm" if cancellation else "viridis", origin="lower", vmin=-N[component] if cancellation else 0, vmax=N[component])
     for s1 in range(N[component] + 1):
         for s2 in range(N[component] + 1 - s1):
             state = tuple(fixed[:component]) + ((s1, s2),) + tuple(fixed[component + 1:])
@@ -70,7 +69,7 @@ def graph_policy(policy, N, transient_states=None, fixed=None, title="Policy Hea
     return im
 
 
-def graph_policy_grid(policy, N, transient_states=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap_grid"):
+def graph_policy_grid(policy, N, transient_states=None, title="Policy Heatmap", SAVE=False, filename="policy_heatmap_grid", cancellation=False):
     # One subplot per state (i, j) of the first component, each plotting the action on the second component
     assert len(N) == 2, "graph_policy_grid requires exactly two component types"
     fig, axes = plt.subplots(N[0] + 1, N[0] + 1, figsize=(2.4 * (N[0] + 1), 2.4 * (N[0] + 1)), squeeze=False, layout="constrained")
@@ -82,7 +81,7 @@ def graph_policy_grid(policy, N, transient_states=None, title="Policy Heatmap", 
             if i + j > N[0]:
                 fig.delaxes(ax)
                 continue
-            im = graph_policy(policy, N, transient_states, fixed=[(i, j), True], ax=ax)
+            im = graph_policy(policy, N, transient_states, fixed=[(i, j), True], ax=ax, cancellation=cancellation)
             ax.set_title("")
             ax.set_xlabel("")
             ax.set_ylabel(f"$s_1^1 = {i}$" if j == 0 else "")
