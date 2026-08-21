@@ -38,11 +38,9 @@ PARAMS = {
 GAMMA = 1  # Discount factor
 CANCEL = True  # Whether to allow cancellation of repairs
 
-EPSILON = 1e-8  # Error for policy evaluation
 THETA = 1e-8  # Error for value iteration
 
 if GAMMA != 1:
-    EPSILON = max((1-GAMMA)/(GAMMA) * EPSILON, 1e-14)
     THETA = max((1-GAMMA)/(GAMMA) * THETA, 1e-14)
 
 
@@ -57,7 +55,7 @@ actions = generate_mdp(**PARAMS)
 mdp = MDP(actions=actions, gamma=GAMMA)
 
 initial_policy = repair_all_policy(mdp)
-PI_policy, PI_V = policy_iteration(mdp, initial_policy, EPSILON)
+PI_policy, PI_V = policy_iteration(mdp, initial_policy)
 # VI_policy, VI_V = value_iteration(mdp, THETA)
 LP_policy, LP_transient = lp(mdp)
 
@@ -97,31 +95,30 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
     if b-a < 0.01:
         return int((a + b) / 2)
-    # Finding uptime for p=(a+b)/2
-    actions = generate_mdp(N=N, alpha=alpha, tau=tau, p=(
-        a+b)/2, r=r, gamma=gamma, delta=1/(N*tau), k=k)
+
+    actions = generate_mdp(N=[N], alpha=[alpha], tau=[tau], p=(a + b) / 2, r=[r], delta=1/(N*tau), k=[k])
     mdp = MDP(actions=actions, gamma=gamma)
     initial_policy = repair_all_policy(mdp)
-    PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
-    actual_uptime = uptime(mdp, PI_policy, N, k)
-    # Next iteration
-    # print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}")
+    PI_policy, _ = policy_iteration(mdp, initial_policy)
+    actual_uptime = uptime(mdp, PI_policy, [N], [k])
+
+    print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}, p_mid: {(a + b) / 2}")
     if actual_uptime < target_uptime:
-        return uptime_binary_search(target_uptime, (a+b)/2, b, N, tau, gamma, k, alpha, r)
+        return uptime_binary_search(target_uptime, (a + b) / 2, b, N, tau, gamma, k, alpha, r)
     else:
-        return uptime_binary_search(target_uptime, a, (a+b)/2, N, tau, gamma, k, alpha, r)
+        return uptime_binary_search(target_uptime, a, (a + b) / 2, N, tau, gamma, k, alpha, r)
 
 
-# uptime_p = uptime_binary_search(
-#     target_uptime=0.999999999,
-#     a=0,
-#     b=100000,
-#     N=10,
-#     tau=500,
-#     gamma=1,
-#     k=1
-# )
-# print(f"Binary search for P to achieve uptime of 0.999999999: {uptime_p}")
+uptime_p = uptime_binary_search(
+    target_uptime=0.999999,
+    a=0,
+    b=1000,
+    N=10,
+    tau=500,
+    gamma=1,
+    k=1
+)
+print(f"Binary search for P to achieve uptime of 0.999999: {uptime_p}")
 
 
 ########################

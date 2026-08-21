@@ -4,8 +4,6 @@ from modules.policy_iteration import policy_iteration
 from modules.utils import action_from_state, policy_sum, recurrent_classes, span_norm
 
 
-EPSILON = 1e-8  # Error for policy evaluation
-
 
 def optimal_policy(N, tau, k, p, gamma=1, alpha=1, r=1):
     # Solves the one type model, returning the MDP, a deterministic optimal policy and h, which is the bias when gamma=1 and the discounted value function otherwise
@@ -13,13 +11,9 @@ def optimal_policy(N, tau, k, p, gamma=1, alpha=1, r=1):
     params["delta"] = 1 / sum(n * t for n, t in zip(params["N"], params["tau"]))
     mdp = MDP(actions=generate_mdp(**params), gamma=gamma)
 
-    epsilon = EPSILON
-    if gamma != 1:
-        epsilon = max((1 - gamma) / gamma * EPSILON, 1e-14)
-    lp_policy, _ = lp(mdp)
-    
+    lp_policy, _ = lp(mdp)    
     policy = {state: {max(lp_policy[state], key=lp_policy[state].get) if lp_policy.get(state) else (0,): 1.0} for state in mdp.states()}
-    policy, h = policy_iteration(mdp, policy, epsilon)
+    policy, h = policy_iteration(mdp, policy)
     return mdp, policy, h
 
 

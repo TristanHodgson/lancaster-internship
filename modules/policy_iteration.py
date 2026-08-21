@@ -1,5 +1,6 @@
 import numpy as np
-from modules.utils import action_from_state, policy_sum, argmax_policy_sum, multichain_policy_gain, greedy_policy, policy_sum_gamma_1, expected_gain_sum, reward_scale, better_action, gain_maximising_actions, policy_matrices
+from modules.utils import action_from_state, argmax_policy_sum, greedy_policy, policy_sum_gamma_1, policy_matrices
+
 
 #################
 ### Gamma < 1 ###
@@ -14,26 +15,20 @@ def policy_evaluation(mdp, policy):
 
 
 def policy_improvement(mdp, V, policy):
-    new_policy = {}
-    policy_stable = True
-    for state in mdp.states():
-        if mdp.is_terminal(state):
-            continue
-        old_action = action_from_state(state, policy)
-        # old_action = \pi(state)
-        pi_s = argmax_policy_sum(mdp, state, V)
-        new_policy[state] = {pi_s: 1}
-        if old_action != pi_s:
-            policy_stable = False
-    return new_policy, policy_stable
+    # d_{n+1}(s) \in \argmax_a r(s, a) + \gamma \sum_j p(j | s, a) V(j)
+    return {
+        state: policy[state] if mdp.is_terminal(state) else {argmax_policy_sum(mdp, state, V): 1.0}
+        for state in mdp.states()
+    }
 
 
 def discounted_policy_iteration(mdp, policy):
-    policy_stable = False
-    while not policy_stable:
+    while True:
         V = policy_evaluation(mdp, policy)
-        policy, policy_stable = policy_improvement(mdp, V, policy)
-    return policy, V
+        new_policy = policy_improvement(mdp, V, policy)
+        if new_policy == policy:
+            return policy, V
+        policy = new_policy
 
 
 #################
@@ -41,45 +36,32 @@ def discounted_policy_iteration(mdp, policy):
 #################
 
 
+def average_evaluation(mdp, policy):
+    # Step 2 of Puterman 8.6.1
+    state_to_idx, P, R = policy_matrices(mdp, policy)
+    A = np.eye(len(state_to_idx)) - P
+    A[:, 0] = 1.0
+    x = np.linalg.solve(A, R)
+    return x[0], {state: 0.0 if state_to_idx[state] == 0 else x[state_to_idx[state]] for state in mdp.states()}
 
 
-def gain_improvement(mdp, g, policy, threshold):
-    # Step 3(a) of Puterman 9.2.1
-    # d_{n+1}(s) \in \argmax_{a} \sum_j p(j | s, a) g(j)
-    return {
-        state: {better_action(
-            state, policy,
-            lambda s, a: expected_gain_sum(mdp, s, a, g),
-            mdp.actions(state), threshold
-        ): 1.0}
-        for state in mdp.states()
-    }
+def average_improvement(mdp, h, policy):
+    # Step 3 of Puterman 8.6.1
+    new_policy = {}
+    for state in mdp.states():
+        scores = {action: policy_sum_gamma_1(mdp, state, action, h) for action in mdp.actions(state)}
+        old_action = action_from_state(state, policy)
+        best_action = old_action if scores[old_action] == max(scores.values()) else max(scores, key=scores.get)
+        new_policy[state] = {best_action: 1.0}
+    return new_policy
 
 
-def bias_improvement(mdp, g, h, policy, threshold):
-    # Step 3(b) of Puterman 9.2.1
-    # d_{n+1}(s) \in \argmax_{a \in B_s} r(s, a) + \sum_j p(j | s, a) h(j)
-    return {
-        state: {better_action(
-            state, policy,
-            lambda s, a: policy_sum_gamma_1(mdp, s, a, h),
-            gain_maximising_actions(mdp, state, g, threshold), threshold
-        ): 1.0}
-        for state in mdp.states()
-    }
-
-
-def policy_iteration_gamma_1(mdp, policy, tol=1e-8):
-    # Puterman's multichain policy iteration (9.2.1, pg 452)
-    threshold = tol * reward_scale(mdp)
+def policy_iteration_gamma_1(mdp, policy):
+    # Puterman's unichain policy iteration (8.6.1, pg 378)
     while True:
-        g, h = multichain_policy_gain(mdp, policy) # Step 2
-        new_policy = gain_improvement(mdp, g, policy, threshold)  # Step 3(a)
-        if new_policy != policy:
-            policy = new_policy
-            continue
-        new_policy = bias_improvement(mdp, g, h, policy, threshold)  # Step 3(b)
-        if new_policy == policy:  # Step 4
+        _, h = average_evaluation(mdp, policy)  # Step 2
+        new_policy = average_improvement(mdp, h, policy)  # Step 3
+        if new_policy == policy:
             return policy, h
         policy = new_policy
 
@@ -89,7 +71,7 @@ def policy_iteration_gamma_1(mdp, policy, tol=1e-8):
 #########################
 
 
-def policy_iteration(mdp, initial_policy, epsilon):
+def policy_iteration(mdp, initial_policy):
     if mdp.gamma < 1:
         policy = greedy_policy(mdp)
         return discounted_policy_iteration(mdp, policy)
