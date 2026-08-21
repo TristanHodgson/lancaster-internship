@@ -24,7 +24,7 @@ def value_iteration_gamma_1(mdp, epsilon):
     s_star = next(iter(mdp.states()))
     u = w = {state: 0.0 for state in mdp.states()}
     delta = float("inf")
-    while delta >= epsilon:
+    while delta > epsilon:
         new_u = {state: max(policy_sum_gamma_1(mdp, state, action, w) for action in mdp.actions(state)) for state in mdp.states()}
         w = {state: new_u[state] - new_u[s_star] for state in mdp.states()}
         delta = span_norm([new_u[state] - u[state] for state in mdp.states()])

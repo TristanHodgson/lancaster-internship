@@ -128,42 +128,48 @@ def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1)
 ###    Speed Test    ###
 ########################
 
-# Commented out to speed up run time. Results below.
-table_data = []
-for gamma in [1-10**(-i) for i in range(1,5)] + [1]:
-    row = [gamma]
-    for i in ["PI", "VI", "LP"]:
-        start = perf_counter()
-        for N in range(2, 6):
-            for tau in [1, 10, 100, 1000]:
-                for k in range(1, N//2):
-                    for p in [0, 10, 100, 1000, 10000, 100000]:
-                        actions = generate_mdp(N=[N], alpha=[1], tau=[tau], p=p, r=[1], delta=1/(N*tau), k=[k])
-                        mdp = MDP(actions=actions, gamma=gamma)
-                        initial_policy = repair_all_policy(mdp)
-                        if i == "PI":
-                            PI_policy, PI_V = policy_iteration(mdp, initial_policy, 1e-6)
-                        elif i == "VI":
-                            VI_policy, VI_V = value_iteration(mdp, 1e-6)
-                        elif i == "LP":
-                            LP_policy, LP_transient = lp(mdp)
-        end = perf_counter()
-        row.append(end-start)
-        print(row)
-    table_data.append(row)
+# # Commented out to speed up run time. Results below.
+# table_data = []
+# for gamma in [0.8,0.9,0.99,0.999,0.9999,1]:
+#     row = [gamma]
+#     for i in ["PI", "VI", "LP"]:
+#         count = 0
+#         start = perf_counter()
+#         for N in range(2, 6):
+#             for tau in [1, 10, 50, 100, 500, 1000]:
+#                 for k in range(1, N//2):
+#                     for p in [0, 5, 10, 50, 100, 500, 1000, 5000, 10000]:
+#                         for _ in range(5):
+#                             count += 1
+#                             print(f"Testing algo={i}, gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
+#                             actions = generate_mdp(N=[N], alpha=[1], tau=[tau], p=p, r=[1], delta=1/(N*(tau+1)), k=[k])
+#                             mdp = MDP(actions=actions, gamma=gamma)
+#                             initial_policy = repair_all_policy(mdp)
+#                             if i == "PI":
+#                                 PI_policy, PI_V = policy_iteration(mdp, initial_policy, 1e-6)
+#                             elif i == "VI":
+#                                 VI_policy, VI_V = value_iteration(mdp, 1e-6)
+#                             elif i == "LP":
+#                                 LP_policy, LP_transient = lp(mdp)
+#         end = perf_counter()
+#         t = (end - start)/count
+#         row.append(t)
+#     print(row)
+#     table_data.append(row)
     
 
-print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
+# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
+# print(f"Averaged over: {count}")
 
-
-# |     Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
-# |-----------|---------------|---------------|---------------|
-# |  0.990000 |        3.6834 |      219.6479 |        2.4225 |
-# |  0.999000 |        3.7741 |      221.0431 |        2.4227 |
-# |  0.999900 |        3.7732 |      223.5712 |        2.4269 |
-# |  0.999990 |        3.7714 |      224.3156 |        2.3885 |
-# |  0.999999 |        3.7537 |      224.9884 |        2.3967 |
-# |  1.000000 |        3.7694 |      220.9227 |        2.4012 |
+# |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
+# |---------|---------------|---------------|---------------|
+# |  0.8000 |        0.0004 |        0.0023 |        0.0017 |
+# |  0.9000 |        0.0004 |        0.0043 |        0.0017 |
+# |  0.9900 |        0.0005 |        0.0381 |        0.0017 |
+# |  0.9990 |        0.0005 |        0.3659 |        0.0017 |
+# |  0.9999 |        0.0005 |        3.6259 |        0.0018 |
+# |  1.0000 |        0.0012 |        0.1268 |        0.0029 |
+# Averaged over: 540, took 37m37s
 
 
 ########################
@@ -172,19 +178,19 @@ print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s
 
 # table_data = []
 
-# for p in range(1,100000, 100):
-#     actions = generate_mdp(N=10, alpha=1, tau=1000, p=p, r=1, gamma=0.99, delta=1/(10*1000), k=1)
-#     mdp = MDP(actions=actions, gamma=0.99)
-#     initial_policy = repair_all_policy(mdp)
-#     PI_policy, _ = policy_iteration(mdp, initial_policy, EPSILON)
-#     actual_uptime = uptime(mdp, PI_policy, 10, 1)
+# for p in range(1,50000, 100):
+#     actions = generate_mdp(N=[10], alpha=[1], tau=[100], p=p, r=[1], delta=1/(10*1000), k=[1])
+#     mdp = MDP(actions=actions, gamma=1)
+#     LP_policy, _ = lp(mdp)
+#     actual_uptime = uptime(mdp, LP_policy, [10], [1])
 #     table_data.append([p, actual_uptime])
 
-# plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#426A5A")
-# plt.title("Uptime vs P for N=10, tau=1000, gamma=0.99, k=1")
-# plt.xlabel("P")
+# plt.figure(figsize=(2.5*3.5/2, 1.5*3.5/2))
+# plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#002147")
+# plt.title("Uptime vs P")
+# plt.xlabel("Downtime penalty (p)")
 # plt.ylabel("9s of Uptime, -log(Downtime)")
-# plt.savefig("plots/monotonicity_10_1000_0.99_1.svg", format="svg")
+# plt.savefig("img/mono/uptime.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
 # plt.show()
 
 # print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))

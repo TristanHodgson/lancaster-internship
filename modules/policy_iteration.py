@@ -1,25 +1,16 @@
 import numpy as np
-from modules.utils import action_from_state, policy_sum, argmax_policy_sum, multichain_policy_gain, greedy_policy, policy_sum_gamma_1, expected_gain_sum, reward_scale, better_action, gain_maximising_actions
+from modules.utils import action_from_state, policy_sum, argmax_policy_sum, multichain_policy_gain, greedy_policy, policy_sum_gamma_1, expected_gain_sum, reward_scale, better_action, gain_maximising_actions, policy_matrices
 
 #################
 ### Gamma < 1 ###
 #################
 
 
-def policy_evaluation(mdp, policy, original_value, epsilon):
-    # We do the inplace method since it has faster convergence
-    delta = float("inf")
-    V = original_value.copy()
-    while delta > epsilon:
-        delta = 0
-        for state in mdp.states():
-            if mdp.is_terminal(state):
-                continue
-            v = V[state]
-            V[state] = policy_sum(
-                mdp, state, action_from_state(state, policy), V)
-            delta = max(delta, abs(v - V[state]))
-    return V
+def policy_evaluation(mdp, policy):
+    # The value of a fixed policy d solves v = r_d + \gamma P_d v, that is (I - \gamma P_d) v = r_d (Puterman 6.1.1)
+    state_to_idx, P, R = policy_matrices(mdp, policy)
+    V = np.linalg.solve(np.eye(len(state_to_idx)) - mdp.gamma * P, R)
+    return {state: V[state_to_idx[state]] for state in mdp.states()}
 
 
 def policy_improvement(mdp, V, policy):
@@ -37,11 +28,10 @@ def policy_improvement(mdp, V, policy):
     return new_policy, policy_stable
 
 
-def discounted_policy_iteration(mdp, policy, epsilon):
+def discounted_policy_iteration(mdp, policy):
     policy_stable = False
-    V = {state: 0 for state in mdp.states()}
     while not policy_stable:
-        V = policy_evaluation(mdp, policy, V, epsilon)
+        V = policy_evaluation(mdp, policy)
         policy, policy_stable = policy_improvement(mdp, V, policy)
     return policy, V
 
@@ -102,6 +92,6 @@ def policy_iteration_gamma_1(mdp, policy, tol=1e-8):
 def policy_iteration(mdp, initial_policy, epsilon):
     if mdp.gamma < 1:
         policy = greedy_policy(mdp)
-        return discounted_policy_iteration(mdp, policy, epsilon)
+        return discounted_policy_iteration(mdp, policy)
     else:
         return policy_iteration_gamma_1(mdp, initial_policy)
