@@ -63,8 +63,7 @@ LP_policy, LP_transient = lp(mdp)
 
 print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
-print(
-    f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
+print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
 # graph_policy(LP_policy, PARAMS["N"], component=0)
 # graph_policy(PI_policy, PARAMS["N"], component=1)
@@ -92,33 +91,33 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 ### Binary Search for P ###
 ###########################
 
-def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
-    if b-a < 0.01:
-        return int((a + b) / 2)
+# def uptime_binary_search(target_uptime, a, b,  N, tau, gamma, k=1, alpha=1, r=1):
+#     if b-a < 0.01:
+#         return int((a + b) / 2)
 
-    actions = generate_mdp(N=[N], alpha=[alpha], tau=[tau], p=(a + b) / 2, r=[r], delta=1/(N*tau), k=[k])
-    mdp = MDP(actions=actions, gamma=gamma)
-    initial_policy = repair_all_policy(mdp)
-    PI_policy, _ = policy_iteration(mdp, initial_policy)
-    actual_uptime = uptime(mdp, PI_policy, [N], [k])
+#     actions = generate_mdp(N=[N], alpha=[alpha], tau=[tau], p=(a + b) / 2, r=[r], delta=1/(N*tau), k=[k])
+#     mdp = MDP(actions=actions, gamma=gamma)
+#     initial_policy = repair_all_policy(mdp)
+#     PI_policy, _ = policy_iteration(mdp, initial_policy)
+#     actual_uptime = uptime(mdp, PI_policy, [N], [k])
 
-    print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}, p_mid: {(a + b) / 2}")
-    if actual_uptime < target_uptime:
-        return uptime_binary_search(target_uptime, (a + b) / 2, b, N, tau, gamma, k, alpha, r)
-    else:
-        return uptime_binary_search(target_uptime, a, (a + b) / 2, N, tau, gamma, k, alpha, r)
+#     print(f"Target uptime: {target_uptime}, actual uptime: {actual_uptime}, a: {a}, b: {b}, p_mid: {(a + b) / 2}")
+#     if actual_uptime < target_uptime:
+#         return uptime_binary_search(target_uptime, (a + b) / 2, b, N, tau, gamma, k, alpha, r)
+#     else:
+#         return uptime_binary_search(target_uptime, a, (a + b) / 2, N, tau, gamma, k, alpha, r)
 
 
-uptime_p = uptime_binary_search(
-    target_uptime=0.999999,
-    a=0,
-    b=1000,
-    N=10,
-    tau=500,
-    gamma=1,
-    k=1
-)
-print(f"Binary search for P to achieve uptime of 0.999999: {uptime_p}")
+# uptime_p = uptime_binary_search(
+#     target_uptime=0.999999,
+#     a=0,
+#     b=1000,
+#     N=10,
+#     tau=500,
+#     gamma=1,
+#     k=1
+# )
+# print(f"Binary search for P to achieve uptime of 0.999999: {uptime_p}")
 
 
 ########################
@@ -143,7 +142,7 @@ print(f"Binary search for P to achieve uptime of 0.999999: {uptime_p}")
 #                             mdp = MDP(actions=actions, gamma=gamma)
 #                             initial_policy = repair_all_policy(mdp)
 #                             if i == "PI":
-#                                 PI_policy, PI_V = policy_iteration(mdp, initial_policy, 1e-6)
+#                                 PI_policy, PI_V = policy_iteration(mdp, initial_policy)
 #                             elif i == "VI":
 #                                 VI_policy, VI_V = value_iteration(mdp, 1e-6)
 #                             elif i == "LP":
@@ -155,18 +154,18 @@ print(f"Binary search for P to achieve uptime of 0.999999: {uptime_p}")
 #     table_data.append(row)
     
 
-# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".4f"))
+# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".5f"))
 # print(f"Averaged over: {count}")
 
 # |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
 # |---------|---------------|---------------|---------------|
-# |  0.8000 |        0.0004 |        0.0023 |        0.0017 |
-# |  0.9000 |        0.0004 |        0.0043 |        0.0017 |
-# |  0.9900 |        0.0005 |        0.0381 |        0.0017 |
-# |  0.9990 |        0.0005 |        0.3659 |        0.0017 |
-# |  0.9999 |        0.0005 |        3.6259 |        0.0018 |
-# |  1.0000 |        0.0012 |        0.1268 |        0.0029 |
-# Averaged over: 540, took 37m37s
+# | 0.80000 |       0.00049 |       0.00292 |       0.00222 |
+# | 0.90000 |       0.00052 |       0.00557 |       0.00225 |
+# | 0.99000 |       0.00060 |       0.04911 |       0.00226 |
+# | 0.99900 |       0.00063 |       0.46884 |       0.00228 |
+# | 0.99990 |       0.00066 |       4.60593 |       0.00229 |
+# | 1.00000 |       0.00052 |       0.15906 |       0.00371 |
+# Averaged over: 540, took 47m48s to run
 
 
 ########################
