@@ -1,4 +1,4 @@
-import numpy as np
+from mpmath import mp
 
 
 def policy_sum(mdp, state, action, V):
@@ -128,8 +128,8 @@ def policy_matrices(mdp, policy):
     # together with the state ordering used to index them
     n = len(mdp.states())
     state_to_idx = {state: i for i, state in enumerate(mdp.states())}
-    P = np.zeros((n, n))  # Transition matrix
-    R = np.zeros(n)  # Reward vector
+    P = mp.zeros(n, n)  # Transition matrix
+    R = mp.zeros(n, 1)  # Reward vector
     for s in mdp.states():
         for a, action_prob in policy[s].items():
             for prob, next_s, reward in mdp.outcomes(s, a):
@@ -145,24 +145,27 @@ def multichain_policy_gain(mdp, policy):
     # h is only unique up to an additive constant on each recurrent class, so we impose Puterman's Condition 9.2.3: h = 0 at the first state of every recurrent class
     state_to_idx, P, R = policy_matrices(mdp, policy)
     n = len(mdp.states())
+    I = mp.eye(n)
 
     # Form the block matrix \begin{pmatrix} I - P & 0 \\ I & I - P \end{pmatrix}
-    A = np.zeros((2 * n, 2 * n))
-    A[:n, :n] = np.eye(n) - P  # (I - P) g = 0
-    A[n:, :n] = np.eye(n)  # g + (I - P) h = R
-    A[n:, n:] = np.eye(n) - P
+    A = mp.zeros(2 * n, 2 * n)
+    A[0:n, 0:n] = I - P          # (I - P) g = 0
+    A[n:2 * n, 0:n] = I          # g + (I - P) h = R
+    A[n:2 * n, n:2 * n] = I - P
     # Form the block vector \begin{pmatrix} 0 \\ R \end{pmatrix}
-    b = np.zeros(2 * n)
-    b[n:] = R
+    b = mp.zeros(2 * n, 1)
+    for i in range(n):
+        b[n + i] = R[i]
 
     # Impose Puterman's Condition 9.2.3: h = 0 at the first state of every recurrent class
     for recurrent_class in recurrent_classes(mdp, policy):
-        i = state_to_idx[recurrent_class[0]]  # index of the first state in this recurrent class
-        A[i, :] = 0.0  # Set the row corresponding to this state to 0
-        A[i, n + i] = 1.0
-        b[i] = 0.0  # this line and the one above give 1\times h(s) = 0, so imposes h(s)=0 as we wanted
+        i = state_to_idx[recurrent_class[0]]
+        for j in range(2 * n):
+            A[i, j] = 0
+        A[i, n + i] = 1
+        b[i] = 0
 
-    x = np.linalg.solve(A, b)  # x is the block vector \begin{pmatrix} g \\ h \end{pmatrix}, so columns :n are g and columns n: are h
+    x = mp.lu_solve(A, b)
     g = {state: x[state_to_idx[state]] for state in mdp.states()}
     h = {state: x[n + state_to_idx[state]] for state in mdp.states()}
     return g, h

@@ -8,7 +8,7 @@ from modules.utils import action_from_state, policy_sum, recurrent_classes, span
 def optimal_policy(N, tau, k, p, gamma=1, alpha=1, r=1):
     # Solves the one type model, returning the MDP, a deterministic optimal policy and h, which is the bias when gamma=1 and the discounted value function otherwise
     params = {"N": [N], "alpha": [alpha], "tau": [tau], "p": p, "r": [r], "k": [k], "cancellation": False}
-    params["delta"] = 1 / sum(n * t for n, t in zip(params["N"], params["tau"]))
+    PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
     mdp = MDP(actions=generate_mdp(**params), gamma=gamma)
 
     lp_policy, _ = lp(mdp)    

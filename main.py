@@ -44,7 +44,7 @@ if GAMMA != 1:
     THETA = max((1-GAMMA)/(GAMMA) * THETA, 1e-14)
 
 
-PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 PARAMS["cancellation"] = CANCEL
 
 ########################
@@ -166,30 +166,31 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 # | 0.99990 |       0.00066 |       4.60593 |       0.00229 |
 # | 1.00000 |       0.00052 |       0.15906 |       0.00371 |
 # Averaged over: 540, took 47m48s to run
-
+# For fairness this test was performed before implementing high precision arithmetic as this cannot be used for the LP solver.
 
 ########################
 ###   Monotonicity   ###
 ########################
 
-# table_data = []
+table_data = []
 
-# for p in range(1,50000, 100):
-#     actions = generate_mdp(N=[10], alpha=[1], tau=[100], p=p, r=[1], delta=1/(10*1000), k=[1])
-#     mdp = MDP(actions=actions, gamma=1)
-#     LP_policy, _ = lp(mdp)
-#     actual_uptime = uptime(mdp, LP_policy, [10], [1])
-#     table_data.append([p, actual_uptime])
+for p in tqdm(range(1,1000000, 1000)):
+    actions = generate_mdp(N=[10], alpha=[1], tau=[100], p=p, r=[1], delta=1/(10*1000), k=[1])
+    mdp = MDP(actions=actions, gamma=1)
+    PI_policy, _ = policy_iteration(mdp, repair_all_policy(mdp))
+    actual_uptime = uptime(mdp, PI_policy, [10], [1])
+    table_data.append([p, actual_uptime])
 
-# plt.figure(figsize=(2.5*3.5/2, 1.5*3.5/2))
+plt.figure(figsize=(2.5*3.5/2, 1.5*3.5/2))
 # plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#002147")
-# plt.title("Uptime vs P")
-# plt.xlabel("Downtime penalty (p)")
-# plt.ylabel("9s of Uptime, -log(Downtime)")
-# plt.savefig("img/mono/uptime.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
-# plt.show()
+plt.plot([row[0] for row in table_data], [1/(1-row[1]) for row in table_data], color="#002147")
+plt.title("Uptime vs P")
+plt.xlabel("Downtime penalty (p)")
+plt.ylabel("9s of Uptime, -log(Downtime)")
+plt.savefig("img/mono/uptime.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
+plt.show()
 
-# print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
+print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
 
 
 ########################
@@ -203,7 +204,7 @@ PARAMS = {
     "r": [1], # Repair cost, do not change
     "k": [1] # Number of components needed to be healthy
 }
-PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 GAMMA = 1 # Discount factor
 
 # table_data = []
@@ -225,7 +226,7 @@ PARAMS = {
     "r": [2,1], # Repair cost, do not change
     "k": [1,1] # Number of components needed to be healthy
 }
-PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 GAMMA = 1 # Discount factor
 
 table_data = []

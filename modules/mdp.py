@@ -1,3 +1,7 @@
+from mpmath import mp, mpf
+
+mp.dps = 50
+
 class MDP:
     def __init__(self, actions, gamma):
         self.transitions = actions
@@ -38,6 +42,12 @@ def reward_function(state, action, r, p, N, k):
 
 def generate_mdp(N, alpha, tau, p, r, delta, k, cancellation=False):
     # N, alpha, tau, r and k are lists indexed by component type, p is the system-wide downtime penalty
+    alpha = [mpf(a) for a in alpha]
+    tau = [mpf(t) for t in tau]
+    r = [mpf(x) for x in r]
+    p = mpf(p)
+    delta = mpf(delta)
+
     model = {}
 
     state_space = [()]

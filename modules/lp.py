@@ -11,30 +11,31 @@ def gurobi_solver(tol=1e-9):
 def solve_lp(mdp, target_uptime=None, N=None, k=None):
     # maximises \sum_{s \in S} \sum_{a \in A(s)} r(s, a) x_{s, a}
     # Subject to:
-    #   \sum_{a \in A(j)} x_{j, a} - \gamma \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = \alpha_j \quad \forall j \in S 
+    #   \sum_{a \in A(j)} x_{j, a} - \gamma \sum_{s \in S} \sum_{a \in A(s)} P(j | s, a) x_{s, a} = \alpha_j \quad \forall j \in S
     #   x_{s, a} \ge 0 \quad \forall s \in S, \forall a \in A(s)
     # Note N and k are the per-type lists, only needed if target_uptime is set
     prob = pulp.LpProblem("MDP_LP_Discounted", pulp.LpMaximize)
     x = {(s, a): pulp.LpVariable(f"x_{s}_{a}", lowBound=0) for s in mdp.states() for a in mdp.actions(s)}
     alpha = 1.0 / len(list(mdp.states())) # vector that has to be positive, stochastic; we simplify to a scalar
+    gamma = float(mdp.gamma)
 
     objective = []
     condition_term2 = {s: [] for s in mdp.states()}
     for s in mdp.states():
         for a in mdp.actions(s):
-            expected_reward = sum(p * r for p, _, r in mdp.outcomes(s, a)) # r(s,a)
+            expected_reward = float(sum(p * r for p, _, r in mdp.outcomes(s, a))) # r(s,a)
             for p, next_s, _ in mdp.outcomes(s, a):
-                condition_term2[next_s].append(p * x[(s, a)]) # P(j | s, a) x_{s, a}, we only consider the states j with non-zero probability of being reached, hence use the set of outcomes
+                condition_term2[next_s].append(float(p) * x[(s, a)]) # P(j | s, a) x_{s, a}, we only consider the states j with non-zero probability of being reached, hence use the set of outcomes
             objective.append(expected_reward * x[(s, a)]) # r(s,a) * x_{s,a}
     prob += pulp.lpSum(objective) # Set the objective as the sum of the elements of the list
 
     for j in mdp.states():
         condition_term1 = pulp.lpSum(x[(j, a)] for a in mdp.actions(j)) # \sum_{a \in A(j)} x_{j, a}
-        prob += (condition_term1 - mdp.gamma * pulp.lpSum(condition_term2[j]) == alpha) # Adding the whole of the first condition
+        prob += (condition_term1 - gamma * pulp.lpSum(condition_term2[j]) == alpha) # Adding the whole of the first condition
 
     if target_uptime is not None:
         # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime >= U
-        prob += (pulp.lpSum((is_healthy(s, N, k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
+        prob += (pulp.lpSum(float(is_healthy(s, N, k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
 
     prob.solve(gurobi_solver()) # Solve using Gurobi
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
@@ -60,11 +61,11 @@ def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=None):
     condition2_term3 = {s: [] for s in mdp.states()}
     for s in mdp.states():
         for a in mdp.actions(s):
-            expected_reward = sum(p * r for p, _, r in mdp.outcomes(s, a)) # r(s,a)
+            expected_reward = float(sum(p * r for p, _, r in mdp.outcomes(s, a))) # r(s,a)
             objective.append(expected_reward * x[(s, a)]) # r(s,a) * x_{s,a}
             for p, next_s, _ in mdp.outcomes(s, a):
-                condition1_term2[next_s].append(p * x[(s, a)]) # P(j | s, a) x_{s, a}
-                condition2_term3[next_s].append(p * y[(s, a)]) # P(j | s, a) y_{s, a}
+                condition1_term2[next_s].append(float(p) * x[(s, a)]) # P(j | s, a) x_{s, a}
+                condition2_term3[next_s].append(float(p) * y[(s, a)]) # P(j | s, a) y_{s, a}
     prob += pulp.lpSum(objective) # Set the objective as the sum of the elements of the list
 
     for j in mdp.states():
@@ -75,7 +76,7 @@ def solve_lp_gamma_1(mdp, target_uptime=None, N=None, k=None):
 
     if target_uptime is not None:
         # \sum_{s, a} (1{s_1 + s_2 \le N - k} - U) x_{s, a} \ge 0, which is uptime \ge U once
-        prob += (pulp.lpSum((is_healthy(s, N, k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
+        prob += (pulp.lpSum(float(is_healthy(s, N, k) - target_uptime) * x[(s, a)] for s in mdp.states() for a in mdp.actions(s)) >= 0) # Adding the uptime condition
 
     prob.solve(gurobi_solver()) # Solve using Gurobi
     assert pulp.LpStatus[prob.status] == "Optimal", f"LP status was {pulp.LpStatus[prob.status]}"
