@@ -12,7 +12,8 @@ from modules.value_iteration import value_iteration
 from modules.helper import graph_policy, policy_equal, uptime, graph_policy_grid
 from modules.utils import repair_all_policy, greedy_policy, policy_sum_gamma_1, action_from_state
 from modules.lp import lp
-from modules.conjectures import optimal_policy, test_monotonicity, test_action_monotonicity, test_recurrent_shape
+from modules.conjectures import optimal_policy, test_monotonicity, test_action_monotonicity, test_recurrent_shape, test_brute_force
+from modules.algorithm import brute_force
 
 ########################
 ###  Gurobi License  ###
@@ -126,16 +127,16 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 
 # # Commented out to speed up run time. Results below.
 # table_data = []
-# for gamma in [0.8,0.9,0.99,0.999,0.9999,1]:
+# for gamma in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99,0.999,1]:
 #     row = [gamma]
-#     for i in ["PI", "VI", "LP"]:
+#     for i in ["PI", "VI", "LP", "Me"]:
 #         count = 0
 #         start = perf_counter()
 #         for N in range(2, 6):
 #             for tau in [1, 10, 50, 100, 500, 1000]:
 #                 for k in range(1, N//2):
 #                     for p in [0, 5, 10, 50, 100, 500, 1000, 5000, 10000]:
-#                         for _ in range(5):
+#                         for _ in range(1):
 #                             count += 1
 #                             print(f"Testing algo={i}, gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
 #                             actions = generate_mdp(N=[N], alpha=[1], tau=[tau], p=p, r=[1], delta=1/(N*(tau+1)), k=[k])
@@ -147,6 +148,9 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 #                                 VI_policy, VI_V = value_iteration(mdp, 1e-6)
 #                             elif i == "LP":
 #                                 LP_policy, LP_transient = lp(mdp)
+#                             elif i == "Me":
+#                                 if gamma == 1:
+#                                     Me_policy = brute_force(mdp)
 #         end = perf_counter()
 #         t = (end - start)/count
 #         row.append(t)
@@ -154,43 +158,49 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 #     table_data.append(row)
     
 
-# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)"], tablefmt="github", floatfmt=".5f"))
+# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)", "Me time (s)"], tablefmt="github", floatfmt=".5f"))
 # print(f"Averaged over: {count}")
 
-# |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |
-# |---------|---------------|---------------|---------------|
-# | 0.80000 |       0.00049 |       0.00292 |       0.00222 |
-# | 0.90000 |       0.00052 |       0.00557 |       0.00225 |
-# | 0.99000 |       0.00060 |       0.04911 |       0.00226 |
-# | 0.99900 |       0.00063 |       0.46884 |       0.00228 |
-# | 0.99990 |       0.00066 |       4.60593 |       0.00229 |
-# | 1.00000 |       0.00052 |       0.15906 |       0.00371 |
-# Averaged over: 540, took 47m48s to run
-# For fairness this test was performed before implementing high precision arithmetic as this cannot be used for the LP solver.
+# |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |   Me time (s) |
+# |---------|---------------|---------------|---------------|---------------|
+# | 0.10000 |       0.01493 |       0.00591 |       0.00258 |       0.00070 |
+# | 0.20000 |       0.01496 |       0.00756 |       0.00260 |       0.00071 |
+# | 0.30000 |       0.01606 |       0.00916 |       0.00259 |       0.00071 |
+# | 0.40000 |       0.01700 |       0.01108 |       0.00260 |       0.00071 |
+# | 0.50000 |       0.01809 |       0.01378 |       0.00258 |       0.00071 |
+# | 0.60000 |       0.01895 |       0.01623 |       0.00259 |       0.00071 |
+# | 0.70000 |       0.02001 |       0.02200 |       0.00260 |       0.00070 |
+# | 0.80000 |       0.02162 |       0.03189 |       0.00262 |       0.00071 |
+# | 0.90000 |       0.02326 |       0.06283 |       0.00262 |       0.00071 |
+# | 0.99000 |       0.02910 |       0.55638 |       0.00266 |       0.00071 |
+# | 0.99900 |       0.03251 |       5.25788 |       0.00266 |       0.00070 |
+# | 1.00000 |       0.02495 |       1.28200 |       0.00379 |       0.15544 |
+# Averaged over: 108, took 13m54s to run
+# Note that a significant speed improvement could be expected by removing the mpmath library. The speed difference is ~3-4 times.
 
 ########################
 ###   Monotonicity   ###
 ########################
 
-table_data = []
+# table_data = []
 
-for p in tqdm(range(1,1000000, 1000)):
-    actions = generate_mdp(N=[10], alpha=[1], tau=[100], p=p, r=[1], delta=1/(10*1000), k=[1])
-    mdp = MDP(actions=actions, gamma=1)
-    PI_policy, _ = policy_iteration(mdp, repair_all_policy(mdp))
-    actual_uptime = uptime(mdp, PI_policy, [10], [1])
-    table_data.append([p, actual_uptime])
+# for p in tqdm(range(1,1000000, 1000)):
+#     actions = generate_mdp(N=[10], alpha=[1], tau=[100], p=p, r=[1], delta=1/(10*1000), k=[1])
+#     mdp = MDP(actions=actions, gamma=1)
+#     PI_policy, _ = policy_iteration(mdp, repair_all_policy(mdp))
+#     actual_uptime = uptime(mdp, PI_policy, [10], [1])
+#     table_data.append([p, actual_uptime])
 
-plt.figure(figsize=(2.5*3.5/2, 1.5*3.5/2))
-# plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#002147")
-plt.plot([row[0] for row in table_data], [1/(1-row[1]) for row in table_data], color="#002147")
-plt.title("Uptime vs P")
-plt.xlabel("Downtime penalty (p)")
-plt.ylabel("9s of Uptime, -log(Downtime)")
-plt.savefig("img/mono/uptime.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
-plt.show()
+# plt.figure(figsize=(2.5*3.5/2, 1.5*3.5/2))
+# # plt.plot([row[0] for row in table_data], [-np.log10(1-row[1]) for row in table_data], color="#002147")
+# plt.plot([row[0] for row in table_data], [1/(1-row[1]) for row in table_data], color="#002147")
+# plt.title("Uptime vs P")
+# plt.xlabel("Downtime penalty (p)")
+# plt.ylabel("9s of Uptime, -log(Downtime)")
+# plt.savefig("img/mono/uptime.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
+# plt.show()
 
-print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
+# print(tabulate.tabulate(table_data, headers=["P", "Uptime"], tablefmt="github", floatfmt=".16f"))
 
 
 ########################
@@ -247,46 +257,55 @@ for p in tqdm([i for i in range(0,100000,100)]+[i for i in range(100000,10000000
 ########################
 
 
-# conjecture1 = []
-# conjecture2 = []
-# conjecture3 = []
-# tested = 0
-# compared = 0
+conjecture1 = []
+conjecture2 = []
+conjecture3 = []
+conjecture4 = []
+tested = 0
+compared = 0
 
-# for gamma in tqdm([0.5, 0.7, 0.8, 0.9, 0.99, 0.999, 1]):
-#     for tau in [1, 10, 100, 200, 500, 700, 850, 1000]:
-#         for N in range(1, 8):
-#             for k in [1]:
-#                 previous_p, previous_policy = None, None
-#                 for p in sorted([0, 10, 100, 200, 500, 700, 1000, 10000, 100000]):
-#                     print(f"Testing gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
-#                     mdp, policy, h = optimal_policy(N, tau, k, p, gamma)
-#                     tested += 1
-#                     conjecture1 += [(gamma, tau, N, k, p) + violation for violation in test_monotonicity(mdp, policy, h)]
-#                     conjecture3 += [(gamma, tau, N, k, p) + violation for violation in test_recurrent_shape(mdp, policy)]
-#                     if previous_policy is not None:
-#                         compared += 1
-#                         conjecture2 += [(gamma, tau, N, k, previous_p, p) + violation for violation in test_action_monotonicity(mdp, policy, previous_policy)]
-#                     previous_p, previous_policy = p, policy
+for gamma in tqdm([0.5, 0.7, 0.8, 0.9, 0.99, 0.999, 1]):
+    for tau in [1, 10, 100, 200, 500, 700, 850, 1000]:
+        for N in range(1, 8):
+            for k in [1]:
+                previous_p, previous_policy = None, None
+                for p in sorted([0, 10, 100, 200, 500, 700, 1000, 10000, 100000]):
+                    print(f"Testing gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
+                    mdp, policy, h = optimal_policy(N, tau, k, p, gamma)
+                    tested += 1
+                    conjecture1 += [(gamma, tau, N, k, p) + violation for violation in test_monotonicity(mdp, policy, h)]
+                    conjecture3 += [(gamma, tau, N, k, p) + violation for violation in test_recurrent_shape(mdp, policy)]
+                    conjecture4 += [(gamma, tau, N, k, p) + violation for violation in test_brute_force(mdp, policy)]
+                    if previous_policy is not None:
+                        compared += 1
+                        conjecture2 += [(gamma, tau, N, k, previous_p, p) + violation for violation in test_action_monotonicity(mdp, policy, previous_policy)]
+                    previous_p, previous_policy = p, policy
 
-# print("\n"*5)
-# print(f"Tested {tested} instances")
-# ### Conjecture 1: x > a \implies \pi(s_1 + x, s_2 - x) = 0 ###
-# print("\n"*5)
-# print(f"Conjecture 1: {len(conjecture1)} violations, {sum(1 for violation in conjecture1 if violation[-1])} of them with both states in the same recurrent class")
-# for gamma, tau, N, k, p, state, x1, x2, f1, f2, same_class in conjecture1:
-#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}, state={state}, same class={same_class}: f({x1})={f1} < f({x2})={f2}")
-
-
-# ### Conjecture 2: increasing p never decreases the optimal action ###
-# print("\n"*5)
-# print(f"Conjecture 2: {len(conjecture2)} violations over {compared} comparisons, {sum(1 for violation in conjecture2 if violation[-1])} of them at a recurrent state")
-# for gamma, tau, N, k, p1, p2, state, a1, a2, recurrent in conjecture2:
-#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, state={state}, recurrent={recurrent}: pi_{p1}({state})={a1} > pi_{p2}({state})={a2}")
+print("\n"*5)
+print(f"Tested {tested} instances")
+### Conjecture 1: x > a \implies \pi(s_1 + x, s_2 - x) = 0 ###
+print("\n"*5)
+print(f"Conjecture 1: {len(conjecture1)} violations, {sum(1 for violation in conjecture1 if violation[-1])} of them with both states in the same recurrent class")
+for gamma, tau, N, k, p, state, x1, x2, f1, f2, same_class in conjecture1:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}, state={state}, same class={same_class}: f({x1})={f1} < f({x2})={f2}")
 
 
-# ### Conjecture 3: each column of the recurrent class is downward closed in s_1 ###
-# print("\n"*5)
-# print(f"Conjecture 3: {len(conjecture3)} violations")
-# for gamma, tau, N, k, p, state, missing in conjecture3:
-#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} is recurrent but {missing} is not in its class")
+### Conjecture 2: increasing p never decreases the optimal action ###
+print("\n"*5)
+print(f"Conjecture 2: {len(conjecture2)} violations over {compared} comparisons, {sum(1 for violation in conjecture2 if violation[-1])} of them at a recurrent state")
+for gamma, tau, N, k, p1, p2, state, a1, a2, recurrent in conjecture2:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, state={state}, recurrent={recurrent}: pi_{p1}({state})={a1} > pi_{p2}({state})={a2}")
+
+
+### Conjecture 3: each column of the recurrent class is downward closed in s_1 ###
+print("\n"*5)
+print(f"Conjecture 3: {len(conjecture3)} violations")
+for gamma, tau, N, k, p, state, missing in conjecture3:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} is recurrent but {missing} is not in its class")
+
+
+### Conjecture 4: Correctness of brute force algorithm ###
+print("\n"*5)
+print(f"Conjecture 4: {len(conjecture4)} violations")
+for gamma, tau, N, k, p, state, a, b, recurrent in conjecture4:
+    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} has action {a} in policy but {b} in brute_force")

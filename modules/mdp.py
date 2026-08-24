@@ -1,6 +1,6 @@
 from mpmath import mp, mpf
 
-mp.dps = 50
+mp.dps = 15
 
 class MDP:
     def __init__(self, actions, gamma):

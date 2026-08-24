@@ -1,19 +1,21 @@
+from mpmath import mpf
+
 from modules.mdp import MDP, generate_mdp
 from modules.lp import lp
 from modules.policy_iteration import policy_iteration
 from modules.utils import action_from_state, policy_sum, recurrent_classes, span_norm
+from modules.algorithm import brute_force
+from modules.utils import action_from_state, repair_all_policy
 
 
 
 def optimal_policy(N, tau, k, p, gamma=1, alpha=1, r=1):
     # Solves the one type model, returning the MDP, a deterministic optimal policy and h, which is the bias when gamma=1 and the discounted value function otherwise
-    params = {"N": [N], "alpha": [alpha], "tau": [tau], "p": p, "r": [r], "k": [k], "cancellation": False}
+    PARAMS = {"N": [N], "alpha": [alpha], "tau": [tau], "p": p, "r": [r], "k": [k], "cancellation": False}
     PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
-    mdp = MDP(actions=generate_mdp(**params), gamma=gamma)
+    mdp = MDP(actions=generate_mdp(**PARAMS), gamma=gamma)
 
-    lp_policy, _ = lp(mdp)    
-    policy = {state: {max(lp_policy[state], key=lp_policy[state].get) if lp_policy.get(state) else (0,): 1.0} for state in mdp.states()}
-    policy, h = policy_iteration(mdp, policy)
+    policy, h = policy_iteration(mdp, repair_all_policy(mdp))
     return mdp, policy, h
 
 
@@ -83,3 +85,23 @@ def test_recurrent_shape(mdp, policy):
                     violations.append((state, ((x, s2),)))
     return violations
 
+
+########################
+###   Conjecture 4   ###
+########################
+
+
+def test_brute_force(mdp, policy):
+    # brute_force returns the same policy as policy iteration
+    violations = []
+    R = class_of_state(mdp, policy)
+
+    other = brute_force(mdp)
+    for state in mdp.states():
+        if mdp.gamma == 1 and state not in R:
+            continue
+        a, = action_from_state(state, policy)
+        b, = action_from_state(state, other)
+        if a != b:
+            violations.append((state, a, b, state in R))
+    return violations
