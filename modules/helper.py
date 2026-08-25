@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from modules.mdp import MDP, is_healthy
 from modules.utils import action_from_state, policy_matrices
-from mpmath import mp
 
 def all_close(V1, V2, tol=1e-8):
     # Check if two value functions are close enough
@@ -104,23 +103,17 @@ def policy_equal(lp_policy, pi_policy):
 
 
 def policy_gain(mdp, policy):
-    # Solves (I - gamma P) V = R for the expected total discounted reward
     _, P, R = policy_matrices(mdp, policy)
-    n = P.rows
-    V = mp.lu_solve(mp.eye(n) - mdp.gamma * P, R)
-    return sum(V[i] for i in range(n)) / n
+    V = np.linalg.solve(np.eye(len(P)) - mdp.gamma * P, R)
+    return V.mean()
 
 
 def policy_gain_gamma_1(mdp, policy):
-    # Solves the evaluation equations g + (I - P) h = R for the scalar gain g
-    # h is only defined up to a constant, so we pin h = 0 at the last state by replacing that column of (I - P) with ones, which puts g in its place
     _, P, R = policy_matrices(mdp, policy)
-    n = P.rows
-    A = mp.eye(n) - P
-    for i in range(n):
-        A[i, n - 1] = 1
-    x = mp.lu_solve(A, R)
-    return x[n - 1]
+    n = len(P)
+    A = np.eye(n) - P
+    A[:, n - 1] = 1.0
+    return np.linalg.solve(A, R)[n - 1]
 
 
 def policy_mrp(mdp, policy, reward):

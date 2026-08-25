@@ -45,8 +45,7 @@ if GAMMA != 1:
     THETA = max((1-GAMMA)/(GAMMA) * THETA, 1e-14)
 
 
-PARAMS["delta"] = mpf(1) / sum(n * t for n,
-                               t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 PARAMS["cancellation"] = CANCEL
 
 ########################
@@ -128,9 +127,6 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE,
 ########################
 ###    Speed Test    ###
 ########################
-########################
-###    Speed Test    ###
-########################
 
 NS = [1, 2, 3, 4, 5, 6]
 GAMMAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999, 1]
@@ -149,6 +145,7 @@ CROSS = dict(marker="x", ms=9, mew=1.4, ls="none")  # mew sets the stroke thickn
 
 
 def times(N):
+    REPEATS = 5
     out = {a: [] for a in ALGOS}
     for gamma in tqdm(GAMMAS):
         mdps = [MDP(actions=generate_mdp(N=[N], alpha=[1], tau=[tau], p=p, r=[1], delta=1/(N*(tau+1)), k=[k]), gamma=gamma)
@@ -156,8 +153,9 @@ def times(N):
         for a, solve in ALGOS.items():
             start = perf_counter()
             for mdp in mdps:
-                solve(mdp)
-            out[a].append((perf_counter() - start) / len(mdps))
+                for _ in range(REPEATS):
+                    solve(mdp)
+            out[a].append((perf_counter() - start) / (len(mdps) * REPEATS))
     return out
 
 
@@ -185,9 +183,7 @@ fig.legend(handles + [cross], labels + [r"$\gamma=1$ (average reward)"],
 fig.savefig("img/speed.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
 plt.show()
 
-
 # Took 52m25s to run
-# Note that a significant speed improvement could be expected by removing the mpmath library. The speed difference is ~3-4 times.
 
 ########################
 ###   Monotonicity   ###
@@ -225,7 +221,7 @@ PARAMS = {
     "r": [1], # Repair cost, do not change
     "k": [1] # Number of components needed to be healthy
 }
-PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 GAMMA = 1 # Discount factor
 
 # table_data = []
@@ -247,7 +243,7 @@ PARAMS = {
     "r": [2,1], # Repair cost, do not change
     "k": [1,1] # Number of components needed to be healthy
 }
-PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = 1 / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
 GAMMA = 1 # Discount factor
 
 table_data = []

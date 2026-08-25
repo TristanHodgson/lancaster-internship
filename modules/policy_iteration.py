@@ -1,6 +1,5 @@
 import numpy as np
 from modules.utils import action_from_state, argmax_policy_sum, greedy_policy, policy_sum_gamma_1, policy_matrices
-from mpmath import mp, mpf
 
 
 #################
@@ -9,10 +8,8 @@ from mpmath import mp, mpf
 
 
 def policy_evaluation(mdp, policy):
-    # The value of a fixed policy d solves v = r_d + \gamma P_d v, that is (I - \gamma P_d) v = r_d (Puterman 6.1.1)
     state_to_idx, P, R = policy_matrices(mdp, policy)
-    A = np.eye(len(state_to_idx)) - float(mdp.gamma) * np.array(P.tolist(), dtype=float)
-    V = np.linalg.solve(A, np.array(R.tolist(), dtype=float).ravel())
+    V = np.linalg.solve(np.eye(len(state_to_idx)) - mdp.gamma * P, R)
     return {state: V[state_to_idx[state]] for state in mdp.states()}
 
 
@@ -40,11 +37,10 @@ def discounted_policy_iteration(mdp, policy):
 
 
 def average_evaluation(mdp, policy):
-    # Step 2 of Puterman 8.6.1
     state_to_idx, P, R = policy_matrices(mdp, policy)
-    A = np.eye(len(state_to_idx)) - np.array(P.tolist(), dtype=float)
+    A = np.eye(len(state_to_idx)) - P
     A[:, 0] = 1.0
-    x = np.linalg.solve(A, np.array(R.tolist(), dtype=float).ravel())
+    x = np.linalg.solve(A, R)
     return x[0], {state: 0.0 if state_to_idx[state] == 0 else x[state_to_idx[state]] for state in mdp.states()}
 
 
@@ -52,9 +48,11 @@ def average_improvement(mdp, h, policy):
     # Step 3 of Puterman 8.6.1
     new_policy = {}
     for state in mdp.states():
-        scores = {action: policy_sum_gamma_1(mdp, state, action, h) for action in mdp.actions(state)}
+        scores = {action: policy_sum_gamma_1(
+            mdp, state, action, h) for action in mdp.actions(state)}
         old_action = action_from_state(state, policy)
-        best_action = old_action if scores[old_action] == max(scores.values()) else max(scores, key=scores.get)
+        best_action = old_action if scores[old_action] == max(
+            scores.values()) else max(scores, key=scores.get)
         new_policy[state] = {best_action: 1.0}
     return new_policy
 

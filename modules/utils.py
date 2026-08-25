@@ -1,13 +1,12 @@
-from mpmath import mp, mpf
+import numpy as np
+
+from modules import mdp
 
 
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
-    assert not mdp.is_terminal(
-        state), f"{state} is terminal PS"
-    gamma = mpf(mdp.gamma)
-    return sum(prob * (reward + gamma * V[next_state]) for prob, next_state, reward in mdp.outcomes(state, action))
-
+    assert not mdp.is_terminal(state), f"{state} is terminal PS"
+    return sum(prob * (reward + mdp.gamma * V[next_state]) for prob, next_state, reward in mdp.outcomes(state, action))
 
 def argmax_policy_sum(mdp, state, V, old_action=None, tol=1e-9):
     # Computes \argmax_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
@@ -133,8 +132,8 @@ def policy_matrices(mdp, policy):
     # together with the state ordering used to index them
     n = len(mdp.states())
     state_to_idx = {state: i for i, state in enumerate(mdp.states())}
-    P = mp.zeros(n, n)  # Transition matrix
-    R = mp.zeros(n, 1)  # Reward vector
+    P = np.zeros((n, n))
+    R = np.zeros(n)
     for s in mdp.states():
         for a, action_prob in policy[s].items():
             for prob, next_s, reward in mdp.outcomes(s, a):
@@ -150,15 +149,13 @@ def multichain_policy_gain(mdp, policy):
     # h is only unique up to an additive constant on each recurrent class, so we impose Puterman's Condition 9.2.3: h = 0 at the first state of every recurrent class
     state_to_idx, P, R = policy_matrices(mdp, policy)
     n = len(mdp.states())
-    I = mp.eye(n)
-
-    # Form the block matrix \begin{pmatrix} I - P & 0 \\ I & I - P \end{pmatrix}
-    A = mp.zeros(2 * n, 2 * n)
-    A[0:n, 0:n] = I - P          # (I - P) g = 0
-    A[n:2 * n, 0:n] = I          # g + (I - P) h = R
+    I = np.eye(n)
+    A = np.zeros((2 * n, 2 * n))
+    A[0:n, 0:n] = I - P
+    A[n:2 * n, 0:n] = I
     A[n:2 * n, n:2 * n] = I - P
-    # Form the block vector \begin{pmatrix} 0 \\ R \end{pmatrix}
-    b = mp.zeros(2 * n, 1)
+    b = np.zeros(2 * n)
+    b[n:] = R
     for i in range(n):
         b[n + i] = R[i]
 
@@ -170,7 +167,7 @@ def multichain_policy_gain(mdp, policy):
         A[i, n + i] = 1
         b[i] = 0
 
-    x = mp.lu_solve(A, b)
+    x = np.linalg.solve(A, b)
     g = {state: x[state_to_idx[state]] for state in mdp.states()}
     h = {state: x[n + state_to_idx[state]] for state in mdp.states()}
     return g, h
