@@ -1,18 +1,23 @@
-from mpmath import mp
+from mpmath import mp, mpf
 
 
 def policy_sum(mdp, state, action, V):
     # Computes \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
     assert not mdp.is_terminal(
         state), f"{state} is terminal PS"
-    return sum(prob * (reward + mdp.gamma * V[next_state]) for prob, next_state, reward in mdp.outcomes(state, action))
+    gamma = mpf(mdp.gamma)
+    return sum(prob * (reward + gamma * V[next_state]) for prob, next_state, reward in mdp.outcomes(state, action))
 
 
-def argmax_policy_sum(mdp, state, V):
-    # Computes  \argmax_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
+def argmax_policy_sum(mdp, state, V, old_action=None, tol=1e-9):
+    # Computes \argmax_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s')) for all actions a in state s
     assert not mdp.is_terminal(state), f"{state} is terminal APS"
-    return max(mdp.actions(state), key=lambda action: policy_sum(mdp, state, action, V))
-
+    values = {action: policy_sum(mdp, state, action, V) for action in mdp.actions(state)}
+    best = max(values.values())
+    # Don't change the policy unless we have to (Puterman 6.4.2)
+    if old_action is not None and values[old_action] >= best - tol * max(1, abs(best)):
+        return old_action
+    return max(values, key=lambda action: values[action])
 
 def max_policy_sum(mdp, state, V):
     # Computes  $\max_a \sum_{s',r} p(s',r|s,a) (r + \gamma V(s'))$ for all actions a in state s

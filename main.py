@@ -45,7 +45,8 @@ if GAMMA != 1:
     THETA = max((1-GAMMA)/(GAMMA) * THETA, 1e-14)
 
 
-PARAMS["delta"] = mpf(1) / sum(n * t for n, t in zip(PARAMS["N"], PARAMS["tau"]))
+PARAMS["delta"] = mpf(1) / sum(n * t for n,
+                               t in zip(PARAMS["N"], PARAMS["tau"]))
 PARAMS["cancellation"] = CANCEL
 
 ########################
@@ -62,9 +63,11 @@ LP_policy, LP_transient = lp(mdp)
 
 # graph_policy(LP_policy, PARAMS["N"], LP_transient)
 
-print(f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
+print(
+    f"Uptime for PI policy: {uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k'])}")
 # print(f"Uptime for VI policy: {uptime(mdp, VI_policy, PARAMS['N'], PARAMS['k'])}")
-print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
+print(
+    f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}")
 
 # graph_policy(LP_policy, PARAMS["N"], component=0)
 # graph_policy(PI_policy, PARAMS["N"], component=1)
@@ -72,7 +75,8 @@ print(f"Uptime for LP policy: {uptime(mdp, LP_policy, PARAMS['N'], PARAMS['k'])}
 FILENAME = f"Cancel={CANCEL}, N={PARAMS['N']}, alpha={PARAMS['alpha']}, tau={PARAMS['tau']}, r={PARAMS['r']}, k={PARAMS['k']}, p={PARAMS['p']}, gamma={GAMMA}"
 TITLE = "Example policy with cancellation" if CANCEL else "Example policy"
 TITLE += f" (uptime={uptime(mdp, PI_policy, PARAMS['N'], PARAMS['k']):.2%})"
-graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAME, SAVE=True, cancellation=CANCEL)
+graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE,
+             filename=FILENAME, SAVE=True, cancellation=CANCEL)
 
 
 ########################
@@ -124,58 +128,65 @@ graph_policy(PI_policy, PARAMS["N"], LP_transient, title=TITLE, filename=FILENAM
 ########################
 ###    Speed Test    ###
 ########################
+########################
+###    Speed Test    ###
+########################
 
-# # Commented out to speed up run time. Results below.
-# table_data = []
-# for gamma in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99,0.999,1]:
-#     row = [gamma]
-#     for i in ["PI", "VI", "LP", "Me"]:
-#         count = 0
-#         start = perf_counter()
-#         for N in range(2, 6):
-#             for tau in [1, 10, 50, 100, 500, 1000]:
-#                 for k in range(1, N//2):
-#                     for p in [0, 5, 10, 50, 100, 500, 1000, 5000, 10000]:
-#                         for _ in range(1):
-#                             count += 1
-#                             print(f"Testing algo={i}, gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
-#                             actions = generate_mdp(N=[N], alpha=[1], tau=[tau], p=p, r=[1], delta=1/(N*(tau+1)), k=[k])
-#                             mdp = MDP(actions=actions, gamma=gamma)
-#                             initial_policy = repair_all_policy(mdp)
-#                             if i == "PI":
-#                                 PI_policy, PI_V = policy_iteration(mdp, initial_policy)
-#                             elif i == "VI":
-#                                 VI_policy, VI_V = value_iteration(mdp, 1e-6)
-#                             elif i == "LP":
-#                                 LP_policy, LP_transient = lp(mdp)
-#                             elif i == "Me":
-#                                 if gamma == 1:
-#                                     Me_policy = brute_force(mdp)
-#         end = perf_counter()
-#         t = (end - start)/count
-#         row.append(t)
-#     print(row)
-#     table_data.append(row)
-    
+NS = [1, 2, 3, 4, 5, 6]
+GAMMAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99, 0.999, 1]
+TAUS = [1, 10, 50, 100, 500, 1000]
+PS = [0, 5, 10, 50, 100, 500, 1000, 5000, 10000]
 
-# print(tabulate.tabulate(table_data, headers=["Gamma", "PI time (s)", "VI time (s)", "LP time (s)", "Me time (s)"], tablefmt="github", floatfmt=".5f"))
-# print(f"Averaged over: {count}")
+ALGOS = {
+    "Policy Iteration": lambda mdp: policy_iteration(mdp, repair_all_policy(mdp)),
+    "Value Iteration": lambda mdp: value_iteration(mdp, 1e-6),
+    "Linear Programming": lp,
+    "Brute Force": brute_force,
+}
+COLOURS = ["#002147", "#AA1A2D", "#426A5A", "#E2C044"]
+BAND = "#F1EEE9"  # background behind the gamma=1 column
+CROSS = dict(marker="x", ms=9, mew=1.4, ls="none")  # mew sets the stroke thickness
 
-# |   Gamma |   PI time (s) |   VI time (s) |   LP time (s) |   Me time (s) |
-# |---------|---------------|---------------|---------------|---------------|
-# | 0.10000 |       0.01493 |       0.00591 |       0.00258 |       0.00070 |
-# | 0.20000 |       0.01496 |       0.00756 |       0.00260 |       0.00071 |
-# | 0.30000 |       0.01606 |       0.00916 |       0.00259 |       0.00071 |
-# | 0.40000 |       0.01700 |       0.01108 |       0.00260 |       0.00071 |
-# | 0.50000 |       0.01809 |       0.01378 |       0.00258 |       0.00071 |
-# | 0.60000 |       0.01895 |       0.01623 |       0.00259 |       0.00071 |
-# | 0.70000 |       0.02001 |       0.02200 |       0.00260 |       0.00070 |
-# | 0.80000 |       0.02162 |       0.03189 |       0.00262 |       0.00071 |
-# | 0.90000 |       0.02326 |       0.06283 |       0.00262 |       0.00071 |
-# | 0.99000 |       0.02910 |       0.55638 |       0.00266 |       0.00071 |
-# | 0.99900 |       0.03251 |       5.25788 |       0.00266 |       0.00070 |
-# | 1.00000 |       0.02495 |       1.28200 |       0.00379 |       0.15544 |
-# Averaged over: 108, took 13m54s to run
+
+def times(N):
+    out = {a: [] for a in ALGOS}
+    for gamma in tqdm(GAMMAS):
+        mdps = [MDP(actions=generate_mdp(N=[N], alpha=[1], tau=[tau], p=p, r=[1], delta=1/(N*(tau+1)), k=[k]), gamma=gamma)
+                for tau in TAUS for k in [1] for p in PS]
+        for a, solve in ALGOS.items():
+            start = perf_counter()
+            for mdp in mdps:
+                solve(mdp)
+            out[a].append((perf_counter() - start) / len(mdps))
+    return out
+
+
+R = {N: times(N) for N in tqdm(NS)}
+
+xs = list(range(len(GAMMAS)))  # equal spacing, so 0.99 and 0.999 separate
+xs[-1] += 0.7  # gap before gamma=1
+fig, axes = plt.subplots(2, 3, figsize=(13, 7), sharex=True, sharey=True)
+for ax, N in zip(axes.flat, NS):
+    ax.set_prop_cycle(color=COLOURS)
+    for a, ts in R[N].items():
+        line, = ax.plot(xs[:-1], ts[:-1], marker="o", ms=4, lw=1.4, label=a)
+        ax.plot(xs[-1], ts[-1], color=line.get_color(), zorder=5, **CROSS)
+    ax.axvspan(xs[-1] - 1, xs[-1] + 0.5, color=BAND, zorder=0)
+    ax.set(yscale="log", title=f"N = {N}", xticks=xs, xticklabels=[str(g) for g in GAMMAS])
+    ax.tick_params(axis="x", rotation=90, labelsize=8, labelbottom=True)  # every row, not just the last
+
+fig.tight_layout(rect=[0.04, 0.13, 1, 1])  # reserve the left strip and bottom band for the figure labels
+fig.supxlabel(r"Discount factor $\gamma$", y=0.09)
+fig.supylabel("Mean time per problem instance (s)", x=0.015)
+handles, labels = axes.flat[0].get_legend_handles_labels()
+cross = plt.Line2D([], [], color="0.3", **CROSS)
+fig.legend(handles + [cross], labels + [r"$\gamma=1$ (average reward)"],
+           loc="lower center", bbox_to_anchor=(0.5, 0.005), ncol=5, frameon=False)
+fig.savefig("img/speed.svg", format="svg", transparent=True, bbox_inches="tight", pad_inches=0.1)
+plt.show()
+
+
+# Took 52m25s to run
 # Note that a significant speed improvement could be expected by removing the mpmath library. The speed difference is ~3-4 times.
 
 ########################
@@ -257,55 +268,55 @@ for p in tqdm([i for i in range(0,100000,100)]+[i for i in range(100000,10000000
 ########################
 
 
-conjecture1 = []
-conjecture2 = []
-conjecture3 = []
-conjecture4 = []
-tested = 0
-compared = 0
+# conjecture1 = []
+# conjecture2 = []
+# conjecture3 = []
+# conjecture4 = []
+# tested = 0
+# compared = 0
 
-for gamma in tqdm([0.5, 0.7, 0.8, 0.9, 0.99, 0.999, 1]):
-    for tau in [1, 10, 100, 200, 500, 700, 850, 1000]:
-        for N in range(1, 8):
-            for k in [1]:
-                previous_p, previous_policy = None, None
-                for p in sorted([0, 10, 100, 200, 500, 700, 1000, 10000, 100000]):
-                    print(f"Testing gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
-                    mdp, policy, h = optimal_policy(N, tau, k, p, gamma)
-                    tested += 1
-                    conjecture1 += [(gamma, tau, N, k, p) + violation for violation in test_monotonicity(mdp, policy, h)]
-                    conjecture3 += [(gamma, tau, N, k, p) + violation for violation in test_recurrent_shape(mdp, policy)]
-                    conjecture4 += [(gamma, tau, N, k, p) + violation for violation in test_brute_force(mdp, policy)]
-                    if previous_policy is not None:
-                        compared += 1
-                        conjecture2 += [(gamma, tau, N, k, previous_p, p) + violation for violation in test_action_monotonicity(mdp, policy, previous_policy)]
-                    previous_p, previous_policy = p, policy
+# for gamma in tqdm([0.5, 0.7, 0.8, 0.9, 0.99, 0.999, 1]):
+#     for tau in [1, 10, 100, 200, 500, 700, 850, 1000]:
+#         for N in range(1, 8):
+#             for k in [1]:
+#                 previous_p, previous_policy = None, None
+#                 for p in sorted([0, 10, 100, 200, 500, 700, 1000, 10000, 100000]):
+#                     print(f"Testing gamma={gamma}, N={N}, tau={tau}, k={k}, p={p}")
+#                     mdp, policy, h = optimal_policy(N, tau, k, p, gamma)
+#                     tested += 1
+#                     conjecture1 += [(gamma, tau, N, k, p) + violation for violation in test_monotonicity(mdp, policy, h)]
+#                     conjecture3 += [(gamma, tau, N, k, p) + violation for violation in test_recurrent_shape(mdp, policy)]
+#                     conjecture4 += [(gamma, tau, N, k, p) + violation for violation in test_brute_force(mdp, policy)]
+#                     if previous_policy is not None:
+#                         compared += 1
+#                         conjecture2 += [(gamma, tau, N, k, previous_p, p) + violation for violation in test_action_monotonicity(mdp, policy, previous_policy)]
+#                     previous_p, previous_policy = p, policy
 
-print("\n"*5)
-print(f"Tested {tested} instances")
-### Conjecture 1: x > a \implies \pi(s_1 + x, s_2 - x) = 0 ###
-print("\n"*5)
-print(f"Conjecture 1: {len(conjecture1)} violations, {sum(1 for violation in conjecture1 if violation[-1])} of them with both states in the same recurrent class")
-for gamma, tau, N, k, p, state, x1, x2, f1, f2, same_class in conjecture1:
-    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}, state={state}, same class={same_class}: f({x1})={f1} < f({x2})={f2}")
-
-
-### Conjecture 2: increasing p never decreases the optimal action ###
-print("\n"*5)
-print(f"Conjecture 2: {len(conjecture2)} violations over {compared} comparisons, {sum(1 for violation in conjecture2 if violation[-1])} of them at a recurrent state")
-for gamma, tau, N, k, p1, p2, state, a1, a2, recurrent in conjecture2:
-    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, state={state}, recurrent={recurrent}: pi_{p1}({state})={a1} > pi_{p2}({state})={a2}")
+# print("\n"*5)
+# print(f"Tested {tested} instances")
+# ### Conjecture 1: x > a \implies \pi(s_1 + x, s_2 - x) = 0 ###
+# print("\n"*5)
+# print(f"Conjecture 1: {len(conjecture1)} violations, {sum(1 for violation in conjecture1 if violation[-1])} of them with both states in the same recurrent class")
+# for gamma, tau, N, k, p, state, x1, x2, f1, f2, same_class in conjecture1:
+#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}, state={state}, same class={same_class}: f({x1})={f1} < f({x2})={f2}")
 
 
-### Conjecture 3: each column of the recurrent class is downward closed in s_1 ###
-print("\n"*5)
-print(f"Conjecture 3: {len(conjecture3)} violations")
-for gamma, tau, N, k, p, state, missing in conjecture3:
-    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} is recurrent but {missing} is not in its class")
+# ### Conjecture 2: increasing p never decreases the optimal action ###
+# print("\n"*5)
+# print(f"Conjecture 2: {len(conjecture2)} violations over {compared} comparisons, {sum(1 for violation in conjecture2 if violation[-1])} of them at a recurrent state")
+# for gamma, tau, N, k, p1, p2, state, a1, a2, recurrent in conjecture2:
+#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, state={state}, recurrent={recurrent}: pi_{p1}({state})={a1} > pi_{p2}({state})={a2}")
 
 
-### Conjecture 4: Correctness of brute force algorithm ###
-print("\n"*5)
-print(f"Conjecture 4: {len(conjecture4)} violations")
-for gamma, tau, N, k, p, state, a, b, recurrent in conjecture4:
-    print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} has action {a} in policy but {b} in brute_force")
+# ### Conjecture 3: each column of the recurrent class is downward closed in s_1 ###
+# print("\n"*5)
+# print(f"Conjecture 3: {len(conjecture3)} violations")
+# for gamma, tau, N, k, p, state, missing in conjecture3:
+#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} is recurrent but {missing} is not in its class")
+
+
+# ### Conjecture 4: Correctness of brute force algorithm ###
+# print("\n"*5)
+# print(f"Conjecture 4: {len(conjecture4)} violations")
+# for gamma, tau, N, k, p, state, a, b, recurrent in conjecture4:
+#     print(f"Violation for gamma={gamma}, tau={tau}, N={N}, k={k}, p={p}: {state} has action {a} in policy but {b} in brute_force")

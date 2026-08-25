@@ -5,7 +5,7 @@ mp.dps = 15
 class MDP:
     def __init__(self, actions, gamma):
         self.transitions = actions
-        self.gamma = gamma  # The discount factor
+        self.gamma = mpf(gamma)  # The discount factor
 
     def states(self):
         # Return the set of all states
