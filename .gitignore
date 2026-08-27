@@ -218,7 +218,8 @@ __marimo__/
 .streamlit/secrets.toml
 
 questions.md
-img/
+img/*
 .vscode
 secret/
 tmp.py
+tmp.md
