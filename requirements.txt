@@ -2,5 +2,3 @@ numpy
 matplotlib
 tqdm
 pulp
-gurobipy
-mpmath
