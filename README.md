@@ -1,6 +1,8 @@
 # Lancaster University STOR-i Summer Research Project
 
-This repository contains code relating to a project investigating the structure of policies for redundant systems. You can find a research [poster](write-up/poster.pdf) and [presentation](write-up/presentation.pdf) in the `write-up` folder. They contain a formal description of the mode, the proved results, and the conjectures we tested numerically.
+This repository contains code relating to a project investigating the structure of policies for redundant systems. You can find a research [poster](write-up/poster.pdf) and [presentation](write-up/presentation.pdf) in the `write-up` folder. They contain a formal description of the model, the proved results, and the conjectures we tested numerically.
+
+A useful application to have when considering these models is cloud file backup. Bob has a file that he wants to back-up. Alice has N servers to store it on, so splits Bob's file into N pieces (using erasure coding) such that any k pieces can be put together to get the whole file back. The problem we consider is what to do when one of the server's fail: how should we balance the cost of repairing a server with the risk of data loss. 
 
 ## To Run
 
