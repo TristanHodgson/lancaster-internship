@@ -33,3 +33,11 @@ This repository contains code relating to a project investigating the structure 
 - **Uptime tooling** We can constrain uptime in the linear program or binary search for it in other models.
 - **Conjecture testing** Each conjecture has a test that sweeps a grid of problem instances and reports every state where it fails. The most recent run found no violations; see `conjecture-report.md`.
 - **Figures** Policy heat-maps with transient states blacked out and randomised states annotated, a grid of heat-maps for the two-type model, uptime against the downtime penalty, and solver timings.
+
+## Citations
+
+* Fairley, Luke. ‘A Dynamic Approach to Optimal Maintenance of Critical Network Infrastructure’. Master’s thesis, Lancaster University, 2022.
+* Fairley, Luke. Bi-Objective Strategic and Operational Decision-Making in Redundancy Allocation Problems with Dynamic Maintenance. 2026, 2147208 B, 326 pages. Application/pdf, 2147208 B, 326 pages. https://doi.org/10.17635/LANCASTER/THESIS/3148.
+* Puterman, Martin L. Markov Decision Processes: Discrete Stochastic Dynamic Programming. Wiley Online Library. Wiley-Interscience, 2005. https://doi.org/10.1002/9780470316887.
+* Serfozo, Richard F. ‘Technical Note—An Equivalence Between Continuous and Discrete Time Markov Decision Processes’. Operations Research 27, no. 3 (1979): 616–20. https://doi.org/10.1287/opre.27.3.616.
+* Sutton, Richard S., and Andrew Barto. Reinforcement Learning: An Introduction. Second edition. Adaptive Computation and Machine Learning. The MIT Press, 2020.
